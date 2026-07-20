@@ -1,0 +1,38 @@
+# Environnement Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Variables d'environnement — NE JAMAIS COMMITER
+.env
+
+# Base de données locale
+*.db
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Distribution / build
+dist/
+build/
+*.egg-info/
+
+# Tests
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Alembic migrations auto-générées (garder les fichiers écrits manuellement)
+# alembic/versions/

@@ -1,0 +1,47 @@
+"""
+Modèle SQLAlchemy — Table `chat_messages`.
+"""
+from datetime import datetime, timezone
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+
+
+class ChatMessage(Base):
+    """
+    Représente un message de chat dans la base de données.
+
+    Colonnes :
+        id          - Clé primaire auto-incrémentée
+        user_id     - Clé étrangère vers l'utilisateur auteur du message (ou lié à l'échange)
+        role        - Rôle de l'expéditeur : 'user', 'assistant' ou 'system'
+        content     - Contenu textuel du message
+        intent      - Intention détectée (ex: 'faq', 'tracking', 'claim', 'general')
+        language    - Langue détectée (ex: 'fr', 'wo', 'en')
+        created_at  - Date de création (UTC)
+    """
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Relation vers l'utilisateur
+    user: Mapped["User"] = relationship("User", back_populates="chat_messages")
+
+    def __repr__(self) -> str:
+        return f"<ChatMessage id={self.id} user_id={self.user_id} role={self.role!r} intent={self.intent!r}>"
