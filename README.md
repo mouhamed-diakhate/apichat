@@ -64,12 +64,3 @@ app/
 ├── services/            # Logique métier
 └── db/                  # Session et base de données
 ```
-
-## Étapes de développement
-
-- [x] **Étape 1** — Structure de base + Health Check
-- [ ] **Étape 2** — Base de données + Authentification JWT
-- [ ] **Étape 3** — Chat web avec IA
-- [ ] **Étape 4** — WhatsApp Webhook
-- [ ] **Étape 5** — Tableau de bord
-- [ ] **Étape 6** — Réclamations & Suivi de commandes
