@@ -1,0 +1,10 @@
+{
+  "id": "06_faq_paiement",
+  "langue": "fr",
+  "input_client": "Quels moyens de paiement acceptez-vous ?",
+  "comportement_attendu": "Liste les moyens de paiement à partir de la FAQ.",
+  "doit_escalader": false,
+  "categorie_test": "faq",
+  "attendu_contient": ["orange money"],
+  "ne_doit_pas_contenir": []
+}

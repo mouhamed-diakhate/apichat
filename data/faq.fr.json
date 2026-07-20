@@ -1,0 +1,41 @@
+{
+  "_commentaire": "Base de connaissances FAQ (français). Ce fichier est modifiable SANS toucher au code : ajoutez/éditez des entrées, l'assistant les utilisera au prochain démarrage. Chaque entrée a des 'mots_cles' qui aident à retrouver la bonne réponse.",
+  "entrees": [
+    {
+      "id": "horaires",
+      "question": "Quels sont vos horaires de service client ?",
+      "mots_cles": ["horaires", "heures", "ouvert", "ouverture", "disponible", "joindre"],
+      "reponse": "Notre service client est disponible du lundi au samedi, de 8h à 20h. L'assistant automatique, lui, répond 24h/24."
+    },
+    {
+      "id": "zones_livraison",
+      "question": "Quelles zones livrez-vous ?",
+      "mots_cles": ["zones", "zone", "livrez", "livraison", "régions", "dakar", "sénégal", "où"],
+      "reponse": "Nous livrons partout au Sénégal. La livraison est plus rapide à Dakar et dans sa banlieue, et couvre aussi les régions."
+    },
+    {
+      "id": "delais_livraison",
+      "question": "Quels sont vos délais de livraison ?",
+      "mots_cles": ["délai", "delais", "délais", "temps", "combien de jours", "quand", "reçois"],
+      "reponse": "En moyenne, la livraison prend 2 à 5 jours ouvrés à Dakar et 3 à 7 jours ouvrés dans le reste du Sénégal."
+    },
+    {
+      "id": "politique_retour",
+      "question": "Quelle est votre politique de retour ?",
+      "mots_cles": ["retour", "retourner", "rendre", "remboursement", "échange", "changer"],
+      "reponse": "Vous pouvez retourner un article sous 14 jours après réception, s'il est non utilisé et dans son emballage d'origine. Le remboursement est effectué après vérification."
+    },
+    {
+      "id": "frais_livraison",
+      "question": "Quels sont les frais de livraison ?",
+      "mots_cles": ["frais", "coût", "prix", "livraison", "gratuit", "combien coûte"],
+      "reponse": "Les frais de livraison à Dakar sont de 2000 FCFA. Pour les autres régions, ils varient de 3000 à 5000 FCFA selon la destination. La livraison est offerte à partir de 50000 FCFA d'achat."
+    },
+    {
+      "id": "moyens_paiement",
+      "question": "Quels moyens de paiement acceptez-vous ?",
+      "mots_cles": ["paiement", "payer", "payement", "carte", "wave", "orange money", "espèces", "cash"],
+      "reponse": "Nous acceptons le paiement à la livraison (espèces), Orange Money, Wave et la carte bancaire."
+    }
+  ]
+}

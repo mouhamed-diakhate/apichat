@@ -1,13 +1,8 @@
-from fastapi import FastAPI
+"""
+Raccourci de compatibilité.
 
-app = FastAPI()
-
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+La véritable application FastAPI est définie dans app/main.py. Ce fichier permet
+simplement de lancer le serveur avec `uvicorn main:app` en plus de la forme
+recommandée `uvicorn app.main:app`.
+"""
+from app.main import app  # noqa: F401

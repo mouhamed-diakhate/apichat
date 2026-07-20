@@ -1,0 +1,10 @@
+{
+  "id": "08_client_en_colere",
+  "langue": "fr",
+  "input_client": "C'est inadmissible ! Ça fait une semaine que j'attends, c'est un vrai scandale, j'en ai marre !",
+  "comportement_attendu": "Détecte la forte insatisfaction et escalade vers un humain avec un résumé.",
+  "doit_escalader": true,
+  "categorie_test": "colere",
+  "attendu_contient": [],
+  "ne_doit_pas_contenir": []
+}

@@ -1,0 +1,10 @@
+{
+  "id": "02_suivi_par_telephone",
+  "langue": "fr",
+  "input_client": "Bonjour, pouvez-vous me dire où en est ma commande ? Mon numéro de téléphone est +221 76 999 88 77.",
+  "comportement_attendu": "Retrouve la commande via le téléphone et donne le statut (en livraison).",
+  "doit_escalader": false,
+  "categorie_test": "suivi_valide",
+  "attendu_contient": ["livraison"],
+  "ne_doit_pas_contenir": []
+}

@@ -1,6 +1,8 @@
 """
 Endpoints pour le chat avec IA et le routage Multi-Agents.
 """
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -26,28 +28,29 @@ def send_message(
     current_user: User = Depends(get_current_user)
 ) -> ChatMessage:
     """
-    Envoie un message à l'assistant IA (Ollama/Qwen).
+    Envoie un message à l'assistant IA.
     
     L'assistant va :
-    1. Détecter la langue et l'intention du message.
-    2. Router le message vers l'agent adéquat (Superviseur).
-    3. Persister le message de l'utilisateur et la réponse de l'assistant en base de données.
-    4. Retourner la réponse générée.
+    1. Détecter l'intention du message (Analytics).
+    2. Récupérer l'historique et router vers l'Orchestrateur IA.
+    3. Persister le message de l'utilisateur et la réponse de l'assistant (avec outils/escalade).
+    4. Retourner la réponse enrichie.
     """
-    # 1. Détection d'intention et de langue
-    analysis = ai_service.detect_intent_and_language(message_data.content)
-    intent = analysis.get("intent", "general")
-    language = analysis.get("language", "fr")
+    # 1. Détection d'intention (Analytics - French only for now)
+    intent = ai_service.detect_intent(message_data.content)
+    language = "fr"
 
-    # 2. Récupérer l'historique récent de l'utilisateur pour le contexte
-    history_db = (
+    # 2. Récupérer l'historique récent de l'utilisateur pour le contexte.
+    #    On prend les 20 messages LES PLUS RÉCENTS (tri décroissant + limite),
+    #    puis on les remet dans l'ordre chronologique pour l'orchestrateur.
+    recents_desc = (
         db.query(ChatMessage)
         .filter(ChatMessage.user_id == current_user.id)
-        .order_by(ChatMessage.created_at.asc())
+        .order_by(ChatMessage.created_at.desc())
         .limit(20)
         .all()
     )
-    history_list = [{"role": msg.role, "content": msg.content} for msg in history_db]
+    history_list = [{"role": m.role, "content": m.content} for m in reversed(recents_desc)]
 
     # 3. Enregistrer le message de l'utilisateur en base de données
     user_msg = ChatMessage(
@@ -59,21 +62,26 @@ def send_message(
     )
     db.add(user_msg)
 
-    # 4. Obtenir la réponse de l'Agent Superviseur
-    assistant_reply = ai_service.supervisor_route(
-        intent=intent,
+    # 4. Obtenir la réponse de l'Orchestrateur IA
+    reply = ai_service.process_message(
         message=message_data.content,
-        history=history_list,
-        language=language
+        history=history_list
     )
 
+    outils_json = json.dumps(reply.outils_utilises) if reply.outils_utilises else None
+
     # 5. Enregistrer le message de l'assistant en base de données
+    #    (reply.texte = le texte de la réponse produite par l'orchestrateur)
     assistant_msg = ChatMessage(
         user_id=current_user.id,
         role="assistant",
-        content=assistant_reply,
+        content=reply.texte,
         intent=intent,
-        language=language
+        language=language,
+        escalade=reply.escalade,
+        raison_escalade=reply.raison_escalade,
+        ticket_id=reply.ticket_id,
+        outils_utilises=outils_json
     )
     db.add(assistant_msg)
 

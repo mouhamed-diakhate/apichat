@@ -77,13 +77,21 @@ def test_chat_routes_require_authentication(client):
     assert r.status_code == 401
 
 
-@patch("app.api.v1.endpoints.chat.ai_service.detect_intent_and_language")
-@patch("app.api.v1.endpoints.chat.ai_service.supervisor_route")
-def test_send_message_success(mock_supervisor, mock_detect, client, auth_headers):
+@patch("app.api.v1.endpoints.chat.ai_service.detect_intent")
+@patch("app.api.v1.endpoints.chat.ai_service.process_message")
+def test_send_message_success(mock_process, mock_detect, client, auth_headers):
     """Vérifie l'envoi de message, le routage et le stockage en base."""
+    from app.intelligence.orchestrator import AssistantReply
+    
     # Configurer les mocks
-    mock_detect.return_value = {"intent": "tracking", "language": "fr"}
-    mock_supervisor.return_value = "🤖 [Agent Suivi de Commande] Je simule la réponse de suivi."
+    mock_detect.return_value = "tracking"
+    mock_process.return_value = AssistantReply(
+        texte="Je simule la réponse de suivi.",
+        escalade=False,
+        raison_escalade=None,
+        ticket_id=None,
+        outils_utilises=[]
+    )
 
     payload = {"content": "Où est mon colis CMD12345 ?"}
     
@@ -99,18 +107,27 @@ def test_send_message_success(mock_supervisor, mock_detect, client, auth_headers
     assert "Je simule la réponse de suivi" in data["content"]
     assert data["intent"] == "tracking"
     assert data["language"] == "fr"
+    assert data["escalade"] is False
 
     # Vérifier l'appel des mocks
     mock_detect.assert_called_once_with(payload["content"])
-    mock_supervisor.assert_called_once()
+    mock_process.assert_called_once()
 
 
-@patch("app.api.v1.endpoints.chat.ai_service.detect_intent_and_language")
-@patch("app.api.v1.endpoints.chat.ai_service.supervisor_route")
-def test_chat_history_retrieval(mock_supervisor, mock_detect, client, auth_headers):
+@patch("app.api.v1.endpoints.chat.ai_service.detect_intent")
+@patch("app.api.v1.endpoints.chat.ai_service.process_message")
+def test_chat_history_retrieval(mock_process, mock_detect, client, auth_headers):
     """Vérifie que l'historique contient bien les messages dans le bon ordre."""
-    mock_detect.return_value = {"intent": "general", "language": "fr"}
-    mock_supervisor.return_value = "Bonjour ! Comment puis-je vous aider ?"
+    from app.intelligence.orchestrator import AssistantReply
+
+    mock_detect.return_value = "general"
+    mock_process.return_value = AssistantReply(
+        texte="Bonjour ! Comment puis-je vous aider ?",
+        escalade=False,
+        raison_escalade=None,
+        ticket_id=None,
+        outils_utilises=[]
+    )
 
     # Envoyer un message
     client.post(

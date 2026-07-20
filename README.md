@@ -1,66 +1,52 @@
-# assistant-ia-api
+# Assistant IA — Service Client TexMiles (groupe Logidoo)
 
-> API backend professionnelle construite avec **FastAPI** — architecture progressive par étapes.
+> Assistant conversationnel multi-canal : **API FastAPI** (authentification JWT + base de
+> données) **+ moteur d'IA** (orchestrateur, outils, RAG FAQ, garde-fous). Branche de
+> fusion réunissant l'infrastructure backend et le moteur d'intelligence.
 
-## Stack technique
+## Ce que fait l'assistant
+- Suivi de commande **avec vérification d'identité** obligatoire.
+- Réponses **FAQ** depuis un fichier éditable (sans toucher au code).
+- **Réclamations** avec ticket de suivi.
+- **Escalade vers un humain** (colère, demande explicite, hors périmètre, incohérence).
+- **Tableau de bord** de statistiques d'usage.
+- Ne se fait jamais passer pour un humain, **n'invente jamais** une information.
+
+Périmètre actuel : **français, texte, un modèle**. Vocal, wolof, WhatsApp, messages
+proactifs = milestones suivants (architecture prévue pour les accueillir).
+
+## Stack
 
 | Composant | Technologie |
 |-----------|-------------|
-| Framework | FastAPI |
-| Serveur ASGI | Uvicorn |
-| Configuration | Pydantic Settings |
-| Base de données | SQLAlchemy + SQLite/PostgreSQL |
-| Authentification | JWT (python-jose) |
-| IA | Gemini / OpenAI |
+| API | FastAPI + Uvicorn |
+| Auth | JWT (python-jose) |
+| Base de données | SQLAlchemy (SQLite en dev, PostgreSQL en prod) |
+| Configuration | pydantic-settings (`.env`) |
+| Modèle IA | Interchangeable : Groq / Gemini / Grok / OpenAI / Ollama (Qwen) |
 
 ## Démarrage rapide
 
-```bash
-# 1. Cloner et entrer dans le projet
-git clone <url>
-cd assistant-ia-api
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+py -m pip install -r requirements.txt
+Copy-Item .env.example .env      # puis renseignez AI_PROVIDER + la clé
 
-# 2. Créer et activer l'environnement virtuel
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-source .venv/bin/activate   # Linux / macOS
-
-# 3. Installer les dépendances
-pip install -r requirements.txt
-
-# 4. Configurer les variables d'environnement
-copy .env.example .env      # Windows
-cp .env.example .env        # Linux / macOS
-# Éditez .env avec vos valeurs
-
-# 5. Démarrer le serveur de développement
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload    # API + Swagger sur http://127.0.0.1:8000/docs
+py cli.py                        # OU chat en ligne de commande
 ```
-
-L'API est disponible sur **http://127.0.0.1:8000**
 
 ## Documentation
 
-| URL | Description |
-|-----|-------------|
-| `GET /` | Informations de l'API |
-| `GET /health` | Vérification de l'état (health check) |
-| `GET /docs` | Documentation interactive (Swagger UI) |
-| `GET /redoc` | Documentation ReDoc |
+- 📘 **[DOCUMENTATION.md](DOCUMENTATION.md)** — architecture, rôle de chaque partie, « qui a
+  construit quoi », correspondance avec le cahier des charges.
+- 🧪 **[GUIDE_DE_TEST.md](GUIDE_DE_TEST.md)** — installer, lancer et tester (tests unitaires,
+  harnais d'évaluation, démonstration Swagger/CLI, dépannage).
 
-## Architecture du projet
+## Tests en un coup d'œil
 
-```
-app/
-├── main.py              # Point d'entrée FastAPI
-├── core/
-│   └── config.py        # Configuration centralisée
-├── api/
-│   └── v1/
-│       ├── router.py    # Agrégateur de routes
-│       └── endpoints/   # Endpoints par fonctionnalité
-├── models/              # Modèles SQLAlchemy
-├── schemas/             # Schémas Pydantic
-├── services/            # Logique métier
-└── db/                  # Session et base de données
+```powershell
+py -m pytest tests/ -q     # 10 tests (API/auth/chat), SANS clé API
+py -m eval.run_eval        # 12 scénarios de recette, AVEC clé API
 ```

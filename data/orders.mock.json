@@ -1,0 +1,59 @@
+{
+  "_commentaire": "DONNEES FICTIVES (MOCK) — ne correspondent à aucune vraie commande. Elles simulent l'API des commandes Texmiles tant que le vrai accès n'est pas disponible. Le format imite ce qu'une vraie API renverrait, pour pouvoir la brancher plus tard sans changer le reste du code.",
+  "commandes": [
+    {
+      "numero": "CMD1001",
+      "client": "Fatou Ndiaye",
+      "telephone": "+221771112233",
+      "email": "fatou.ndiaye@example.sn",
+      "statut": "en préparation",
+      "date_estimee": "2026-07-24",
+      "articles": ["1x Boubou brodé", "1x Foulard en bazin"]
+    },
+    {
+      "numero": "CMD1002",
+      "client": "Moussa Diop",
+      "telephone": "+221770001122",
+      "email": "moussa.diop@example.sn",
+      "statut": "expédiée",
+      "date_estimee": "2026-07-22",
+      "articles": ["2x Chemise wax"]
+    },
+    {
+      "numero": "CMD1003",
+      "client": "Awa Sow",
+      "telephone": "+221769998877",
+      "email": "awa.sow@example.sn",
+      "statut": "en livraison",
+      "date_estimee": "2026-07-21",
+      "articles": ["1x Ensemble tailleur"]
+    },
+    {
+      "numero": "CMD1004",
+      "client": "Cheikh Fall",
+      "telephone": "+221765554433",
+      "email": "cheikh.fall@example.sn",
+      "statut": "livrée",
+      "date_estimee": "2026-07-18",
+      "articles": ["1x Sac en cuir"]
+    },
+    {
+      "numero": "CMD1005",
+      "client": "Bineta Ba",
+      "telephone": "+221768887766",
+      "email": "bineta.ba@example.sn",
+      "statut": "retardée",
+      "date_estimee": "2026-07-25",
+      "articles": ["3x Pagne tissé"]
+    },
+    {
+      "numero": "CMD1006",
+      "client": "Omar Sy",
+      "telephone": "+221764443322",
+      "email": "omar.sy@example.sn",
+      "statut": "en préparation",
+      "date_estimee": "2026-07-26",
+      "articles": ["1x Veste en jean"]
+    }
+  ]
+}

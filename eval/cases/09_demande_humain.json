@@ -1,0 +1,10 @@
+{
+  "id": "09_demande_humain",
+  "langue": "fr",
+  "input_client": "Je préfère parler à un humain s'il vous plaît.",
+  "comportement_attendu": "Escalade immédiate vers un agent humain, sans insister pour garder le client.",
+  "doit_escalader": true,
+  "categorie_test": "demande_humain",
+  "attendu_contient": [],
+  "ne_doit_pas_contenir": []
+}

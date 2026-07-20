@@ -14,3 +14,7 @@ api_router.include_router(auth.router, prefix="/auth", tags=["Authentification"]
 from app.api.v1.endpoints import chat
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat IA"])
 
+# Étape 4 : Dashboard
+from app.api.v1.endpoints import dashboard
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Statistiques"])
+

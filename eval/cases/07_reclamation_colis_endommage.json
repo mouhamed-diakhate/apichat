@@ -1,0 +1,11 @@
+{
+  "id": "07_reclamation_colis_endommage",
+  "langue": "fr",
+  "input_client": "J'ai reçu ma commande CMD1004 mais le colis est arrivé endommagé, le sac est abîmé.",
+  "comportement_attendu": "Reconnaît une réclamation, ouvre un ticket et confirme avec un délai.",
+  "doit_escalader": true,
+  "categorie_test": "reclamation",
+  "ticket_attendu": true,
+  "attendu_contient": [],
+  "ne_doit_pas_contenir": []
+}

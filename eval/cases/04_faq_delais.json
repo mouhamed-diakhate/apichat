@@ -1,0 +1,10 @@
+{
+  "id": "04_faq_delais",
+  "langue": "fr",
+  "input_client": "Vous livrez en combien de temps en général ?",
+  "comportement_attendu": "Répond à partir de la FAQ (délais de livraison), sans inventer.",
+  "doit_escalader": false,
+  "categorie_test": "faq",
+  "attendu_contient": ["jour"],
+  "ne_doit_pas_contenir": []
+}

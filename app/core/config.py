@@ -32,11 +32,14 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./assistant_ia.db"
 
     # IA (Étape 3)
-    AI_PROVIDER: str = "ollama"  # gemini | openai | ollama
+    AI_PROVIDER: str = "groq"  # groq | gemini | grok | openai | ollama
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+    XAI_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
     OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
     OLLAMA_MODEL: str = "qwen2.5"
+    MODEL: str = ""  # Laissez vide pour utiliser le modèle par défaut du provider
 
     model_config = SettingsConfigDict(
         env_file=".env",

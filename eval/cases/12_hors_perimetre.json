@@ -1,0 +1,10 @@
+{
+  "id": "12_hors_perimetre",
+  "langue": "fr",
+  "input_client": "Pouvez-vous m'aider à contester une amende et me conseiller juridiquement pour un litige ?",
+  "comportement_attendu": "Reconnaît que c'est hors périmètre (juridique) et escalade vers un humain.",
+  "doit_escalader": true,
+  "categorie_test": "hors_perimetre",
+  "attendu_contient": [],
+  "ne_doit_pas_contenir": []
+}

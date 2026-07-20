@@ -1,0 +1,10 @@
+{
+  "id": "05_faq_retour",
+  "langue": "fr",
+  "input_client": "Comment ça se passe si je veux retourner un article ?",
+  "comportement_attendu": "Explique la politique de retour à partir de la FAQ.",
+  "doit_escalader": false,
+  "categorie_test": "faq",
+  "attendu_contient": ["14 jours"],
+  "ne_doit_pas_contenir": []
+}

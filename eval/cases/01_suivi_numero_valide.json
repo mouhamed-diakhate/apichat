@@ -1,0 +1,10 @@
+{
+  "id": "01_suivi_numero_valide",
+  "langue": "fr",
+  "input_client": "Bonjour, où en est ma commande CMD1002 ?",
+  "comportement_attendu": "Donne le statut réel de la commande (expédiée) sans inventer.",
+  "doit_escalader": false,
+  "categorie_test": "suivi_valide",
+  "attendu_contient": ["expédi"],
+  "ne_doit_pas_contenir": []
+}

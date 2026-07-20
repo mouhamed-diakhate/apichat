@@ -20,6 +20,10 @@ class ChatMessageResponse(BaseModel):
     content: str
     intent: str | None = None
     language: str | None = None
+    escalade: bool | None = None
+    raison_escalade: str | None = None
+    ticket_id: str | None = None
+    outils_utilises: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
