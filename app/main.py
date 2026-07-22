@@ -8,13 +8,20 @@ Documentation interactive :
     http://127.0.0.1:8000/docs       (Swagger UI)
     http://127.0.0.1:8000/redoc      (ReDoc)
 """
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from app.core.config import settings
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 from app.api.v1.router import api_router
+from app.api.v1.endpoints.auth import get_current_user
 from app.db.base import Base
 from app.db.session import engine
 
@@ -57,6 +64,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Fichiers statiques et templates Jinja2
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
 # ---------------------------------------------------------------------------
 # Inclusion des routes API versionnées
 # ---------------------------------------------------------------------------
@@ -80,6 +91,15 @@ async def root():
         "docs": "/docs",
         "health": "/health",
     }
+
+
+@app.get(
+    "/dashboard",
+    tags=["Dashboard"],
+    summary="Tableau de bord de supervision",
+)
+async def dashboard_page(request: Request):
+    return templates.TemplateResponse(request, "dashboard.html")
 
 
 @app.get(

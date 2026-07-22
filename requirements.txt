@@ -4,6 +4,7 @@
 
 # Framework web
 fastapi>=0.111.0
+jinja2>=3.1.0
 
 # Serveur ASGI
 uvicorn[standard]>=0.29.0

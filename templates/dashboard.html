@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TexMiles Assistant — Tableau de bord</title>
+  <link rel="icon" type="image/png" href="/static/texmiles-logo.png">
+  <link rel="stylesheet" href="/static/dashboard.css?v=3">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="/static/texmiles-logo.png" alt="TexMiles — your last miles provider" class="brand-logo">
+        <div class="brand-text">
+          <h1>Assistant IA</h1>
+          <p>Tableau de bord service client · <span class="badge">Démo</span> · Dernière màj : <span id="last-update">—</span></p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="login-panel" class="login-panel">
+    <div class="login-header">
+      <img src="/static/texmiles-logo.png" alt="TexMiles" class="login-logo">
+      <div>
+        <h2>Connexion</h2>
+        <p class="login-subtitle">Accédez au tableau de bord de supervision</p>
+      </div>
+    </div>
+    <form id="login-form">
+      <input id="login-email" type="email" placeholder="Email" required>
+      <input id="login-password" type="password" placeholder="Mot de passe" required>
+      <button type="submit">Se connecter</button>
+      <p class="error" id="login-error"></p>
+    </form>
+  </section>
+
+  <div id="dashboard-app" class="dashboard-app">
+    <main>
+      <section class="toolbar">
+        <button id="logout-btn" class="logout-button">Déconnexion</button>
+      </section>
+      <section class="kpi-grid">
+        <article class="kpi-card">
+          <h3>Messages reçus</h3>
+          <span class="kpi-value" id="kpi-messages">—</span>
+        </article>
+        <article class="kpi-card">
+          <h3>Taux d'escalade</h3>
+          <span class="kpi-value" id="kpi-escalade">—</span>
+        </article>
+        <article class="kpi-card">
+          <h3>Tickets créés</h3>
+          <span class="kpi-value" id="kpi-tickets">—</span>
+        </article>
+        <article class="kpi-card">
+          <h3>Langue dominante</h3>
+          <span class="kpi-value" id="kpi-langue">—</span>
+        </article>
+      </section>
+
+      <section class="charts-grid">
+        <article class="chart-box">
+          <h3>Répartition par intention</h3>
+          <canvas id="chart-intents"></canvas>
+        </article>
+        <article class="chart-box">
+          <h3>Répartition par langue</h3>
+          <canvas id="chart-langs"></canvas>
+        </article>
+      </section>
+
+      <section class="filters">
+        <select id="filter-intent">
+          <option value="">Toutes intentions</option>
+          <option value="faq">FAQ</option>
+          <option value="tracking">Suivi</option>
+          <option value="claim">Réclamation</option>
+          <option value="human">Humain</option>
+          <option value="general">Général</option>
+        </select>
+        <select id="filter-escalade">
+          <option value="">Tous statuts</option>
+          <option value="false">Résolu</option>
+          <option value="true">Escaladé</option>
+        </select>
+        <button id="btn-refresh" title="Rafraîchir">&#x21bb;</button>
+      </section>
+
+      <section class="table-section">
+        <table id="conv-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Client</th>
+              <th>Intention</th>
+              <th>Statut</th>
+              <th>Ticket</th>
+              <th>Aperçu</th>
+            </tr>
+          </thead>
+          <tbody id="conv-body"></tbody>
+        </table>
+        <nav id="pagination"></nav>
+      </section>
+    </main>
+  </div>
+
+  <aside id="demo-chat">
+    <button id="demo-toggle" title="Tester l'assistant">&#x1f4ac;</button>
+    <div id="demo-panel">
+      <div class="demo-header">
+        <img src="/static/texmiles-logo.png" alt="" class="demo-logo" aria-hidden="true">
+        <div class="demo-header-text">
+          <strong>Assistant TexMiles</strong>
+          <small>Session de démonstration</small>
+        </div>
+        <button id="demo-close" type="button" class="demo-close" title="Fermer" aria-label="Fermer l'assistant">&times;</button>
+      </div>
+      <div id="demo-messages">
+        <div class="msg assistant">
+          Bonjour ! Je suis l'assistant automatisé de Texmiles. Posez-moi une question sur vos commandes, nos services, ou signalez un problème.
+        </div>
+      </div>
+      <form id="demo-form">
+        <input id="demo-input" type="text" placeholder="Ex: Où est ma commande ?" autocomplete="off" required>
+        <button type="submit">Envoyer</button>
+      </form>
+    </div>
+  </aside>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>
