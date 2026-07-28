@@ -20,6 +20,8 @@ from .orders import OrderSource
 from .faq import FaqBase
 from .guardrails import escalade_forcee
 from .prompt_fr import SYSTEM_PROMPT_FR
+from .prompt_wo import SYSTEM_PROMPT_WO
+from .prompt_en import SYSTEM_PROMPT_EN
 
 
 # --- Description des outils, au format attendu par l'API (style OpenAI) ---------
@@ -109,12 +111,18 @@ class Assistant:
         self.faq = faq
         self._compteur_tickets = 0  # pour générer des numéros de ticket lisibles
 
-    def handle(self, message: str, historique: list[dict] | None = None) -> AssistantReply:
+    def handle(self, message: str, historique: list[dict] | None = None, language: str = "fr") -> AssistantReply:
         """Traite un message client et renvoie la réponse de l'assistant."""
         historique = historique or []
         messages = historique + [{"role": "user", "content": message}]
 
         reply = AssistantReply(texte="")
+        if language == "wo":
+            system_prompt = SYSTEM_PROMPT_WO
+        elif language == "en":
+            system_prompt = SYSTEM_PROMPT_EN
+        else:
+            system_prompt = SYSTEM_PROMPT_FR
 
         # Filet de sécurité côté code : colère / demande explicite d'humain.
         raison = escalade_forcee(message)
@@ -125,7 +133,7 @@ class Assistant:
         try:
             # Boucle outils : le modèle peut demander plusieurs outils avant de répondre.
             for _ in range(5):  # garde-fou anti-boucle infinie
-                resp = self.provider.chat(SYSTEM_PROMPT_FR, messages, OUTILS)
+                resp = self.provider.chat(system_prompt, messages, OUTILS)
 
                 if not resp.tool_calls:
                     reply.texte = resp.text.strip()

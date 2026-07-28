@@ -18,6 +18,7 @@ from app.services.auth_service import auth_service
 
 router = APIRouter()
 bearer_scheme = HTTPBearer()
+bearer_scheme_optional = HTTPBearer(auto_error=False)
 
 
 # ---------------------------------------------------------------------------
@@ -50,6 +51,25 @@ def get_current_user(
             detail="Utilisateur introuvable ou compte désactivé.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """
+    Dépendance FastAPI optionnelle : renvoie l'utilisateur si authentifié,
+    ou None si visiteur anonyme / invité.
+    """
+    if credentials is None:
+        return None
+    token_data = decode_access_token(credentials.credentials)
+    if token_data is None or token_data.user_id is None:
+        return None
+    user = auth_service.get_user_by_id(db, token_data.user_id)
+    if user is None or not user.is_active:
+        return None
     return user
 
 

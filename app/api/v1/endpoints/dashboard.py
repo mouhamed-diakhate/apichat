@@ -25,8 +25,8 @@ def get_stats(
     - Tickets créés
     """
     total_messages = db.query(ChatMessage).filter(ChatMessage.role == "user").count()
-    total_escalades = db.query(ChatMessage).filter(ChatMessage.escalade == True).count()
-    tickets_created = db.query(ChatMessage).filter(ChatMessage.ticket_id != None).count()
+    total_escalades = db.query(ChatMessage).filter(ChatMessage.escalade == True, ChatMessage.role == "user").count()
+    tickets_created = db.query(func.count(func.distinct(ChatMessage.ticket_id))).scalar() or 0
     
     # Intents
     intents_db = db.query(ChatMessage.intent, func.count(ChatMessage.id)).filter(ChatMessage.role == "user").group_by(ChatMessage.intent).all()

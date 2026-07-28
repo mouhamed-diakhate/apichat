@@ -82,6 +82,10 @@ def test_dashboard_stats_and_conversations_return_expected_data(client, auth_hea
         user = db.query(User).filter(User.email == "dashboard@example.com").first()
         assert user is not None
 
+        # Nettoyer tous les messages pour isoler les statistiques du test
+        db.query(ChatMessage).delete()
+        db.commit()
+
         db.add_all([
             ChatMessage(
                 user_id=user.id,

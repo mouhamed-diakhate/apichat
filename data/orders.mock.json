@@ -1,5 +1,5 @@
 {
-  "_commentaire": "DONNEES FICTIVES (MOCK) — ne correspondent à aucune vraie commande. Elles simulent l'API des commandes Texmiles tant que le vrai accès n'est pas disponible. Le format imite ce qu'une vraie API renverrait, pour pouvoir la brancher plus tard sans changer le reste du code.",
+  "_commentaire": "DONNEES FICTIVES (MOCK) — ne correspondent à aucune vraie commande. Elles simulent l'API des commandes Texmiles tant que le vrai accès n'est pas disponible.",
   "commandes": [
     {
       "numero": "CMD1001",
@@ -54,6 +54,96 @@
       "statut": "en préparation",
       "date_estimee": "2026-07-26",
       "articles": ["1x Veste en jean"]
+    },
+    {
+      "numero": "CMD1007",
+      "client": "Mamadou Sow",
+      "telephone": "+221773334455",
+      "email": "mamadou.sow@gmail.com",
+      "statut": "expédiée",
+      "date_estimee": "2026-07-26",
+      "articles": ["1x Sac à dos cuir", "1x Portefeuille"]
+    },
+    {
+      "numero": "CMD1008",
+      "client": "Aminata Cissé",
+      "telephone": "+221774445566",
+      "email": "aminata.cisse@outlook.com",
+      "statut": "en livraison",
+      "date_estimee": "2026-07-24",
+      "articles": ["2x Robe imprimée Wax"]
+    },
+    {
+      "numero": "CMD1009",
+      "client": "Ibrahima Gueye",
+      "telephone": "+221775556677",
+      "email": "ibrahima.gueye@yahoo.fr",
+      "statut": "en préparation",
+      "date_estimee": "2026-07-27",
+      "articles": ["1x Chaussures artisanales"]
+    },
+    {
+      "numero": "CMD1010",
+      "client": "Khadija Sarr",
+      "telephone": "+221776667788",
+      "email": "khadija.sarr@gmail.com",
+      "statut": "retardée",
+      "date_estimee": "2026-07-29",
+      "articles": ["1x Ensemble Bazin Riche"]
+    },
+    {
+      "numero": "CMD1011",
+      "client": "Ousmane Touré",
+      "telephone": "+221777778899",
+      "email": "ousmane.toure@hotmail.com",
+      "statut": "livrée",
+      "date_estimee": "2026-07-20",
+      "articles": ["1x Ceinture en cuir", "2x T-shirt Texmiles"]
+    },
+    {
+      "numero": "CMD1012",
+      "client": "Mariama Faye",
+      "telephone": "+221781112233",
+      "email": "mariama.faye@gmail.com",
+      "statut": "expédiée",
+      "date_estimee": "2026-07-25",
+      "articles": ["1x Montre homme", "1x Lunettes de soleil"]
+    },
+    {
+      "numero": "CMD1013",
+      "client": "Modou Bamba",
+      "telephone": "+221782223344",
+      "email": "modou.bamba@gmail.com",
+      "statut": "en livraison",
+      "date_estimee": "2026-07-24",
+      "articles": ["1x Tapis décoratif", "2x Coussins"]
+    },
+    {
+      "numero": "CMD1014",
+      "client": "Coumba Diagne",
+      "telephone": "+221783334455",
+      "email": "coumba.diagne@yahoo.fr",
+      "statut": "en préparation",
+      "date_estimee": "2026-07-28",
+      "articles": ["1x Parfum oriental 100ml"]
+    },
+    {
+      "numero": "CMD1015",
+      "client": "Babacar Kane",
+      "telephone": "+221784445566",
+      "email": "babacar.kane@outlook.com",
+      "statut": "retardée",
+      "date_estimee": "2026-07-30",
+      "articles": ["1x Valise de voyage grand format"]
+    },
+    {
+      "numero": "CMD1016",
+      "client": "Seynabou Ndao",
+      "telephone": "+221785556677",
+      "email": "seynabou.ndao@gmail.com",
+      "statut": "livrée",
+      "date_estimee": "2026-07-19",
+      "articles": ["2x Sandales en cuir"]
     }
   ]
 }

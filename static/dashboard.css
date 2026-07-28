@@ -390,37 +390,40 @@ tr:last-child td { border-bottom: none; }
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  z-index: 1000;
+  z-index: 10000;
 }
 
 #demo-toggle {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 56px;
   height: 56px;
   border-radius: 50%;
   border: none;
   background: var(--texmiles-yellow);
   color: var(--texmiles-black);
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(253, 184, 19, 0.45);
+  box-shadow: 0 4px 20px rgba(253, 184, 19, 0.5);
   transition: transform 0.2s, box-shadow 0.2s;
   margin-left: auto;
 }
 
 #demo-toggle:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(253, 184, 19, 0.55);
+  box-shadow: 0 6px 24px rgba(253, 184, 19, 0.7);
 }
 
 #demo-panel {
   display: none;
   width: 380px;
-  max-height: 60vh;
+  height: 520px;
+  max-height: 80vh;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 1rem;
-  box-shadow: 0 8px 32px rgba(26, 26, 26, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   flex-direction: column;
   overflow: hidden;
   margin-bottom: 0.75rem;
@@ -463,7 +466,7 @@ tr:last-child td { border-bottom: none; }
   height: 32px;
   border: none;
   border-radius: 50%;
-  background: rgba(26, 26, 26, 0.08);
+  background: rgba(26, 26, 26, 0.1);
   color: var(--texmiles-black);
   font-size: 1.5rem;
   line-height: 1;
@@ -476,7 +479,7 @@ tr:last-child td { border-bottom: none; }
 }
 
 .demo-close:hover {
-  background: rgba(26, 26, 26, 0.15);
+  background: rgba(26, 26, 26, 0.2);
   color: var(--danger);
 }
 
@@ -487,17 +490,16 @@ tr:last-child td { border-bottom: none; }
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  min-height: 200px;
-  max-height: 350px;
-  background: var(--bg);
+  background: #f1f5f9;
 }
 
 .msg {
   max-width: 85%;
-  padding: 0.625rem 0.875rem;
+  padding: 0.75rem 1rem;
   border-radius: 1rem;
   font-size: 0.875rem;
-  line-height: 1.4;
+  line-height: 1.45;
+  word-break: break-word;
   animation: fadeIn 0.2s ease;
 }
 
@@ -508,10 +510,11 @@ tr:last-child td { border-bottom: none; }
 
 .msg.assistant {
   align-self: flex-start;
-  background: var(--card-bg);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
   border-bottom-left-radius: 0.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .msg.user {
@@ -519,14 +522,37 @@ tr:last-child td { border-bottom: none; }
   background: var(--texmiles-yellow);
   color: var(--texmiles-black);
   border-bottom-right-radius: 0.25rem;
-  font-weight: 500;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .msg.loading {
   align-self: flex-start;
-  background: var(--primary-light);
-  color: var(--text-muted);
+  background: #e2e8f0;
+  color: #64748b;
   font-style: italic;
+}
+
+/* Boutons d'action dans le chat */
+.chat-quick-btn {
+  background: #0f172a !important;
+  color: #fdb813 !important;
+  border: 1px solid #fdb813 !important;
+  padding: 7px 14px !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chat-quick-btn:hover {
+  background: #fdb813 !important;
+  color: #0f172a !important;
+  border-color: #fdb813 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(253, 184, 19, 0.4) !important;
 }
 
 #demo-form {
@@ -555,15 +581,19 @@ tr:last-child td { border-bottom: none; }
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: 2rem;
-  background: var(--texmiles-yellow);
-  color: var(--texmiles-black);
-  font-weight: 700;
-  cursor: pointer;
+  background: var(--texmiles-black);
+  color: var(--texmiles-yellow);
   font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
   transition: background 0.15s;
 }
 
-#demo-form button:hover { background: var(--texmiles-yellow-dark); }
+#demo-form button:hover {
+  background: var(--texmiles-yellow);
+  color: var(--texmiles-black);
+}
+
 #demo-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */

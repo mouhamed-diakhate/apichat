@@ -28,6 +28,7 @@ from app.db.session import engine
 # Importer tous les modèles pour que SQLAlchemy les détecte
 import app.models.user  # noqa: F401
 import app.models.chat  # noqa: F401
+import app.models.order  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +101,15 @@ async def root():
 )
 async def dashboard_page(request: Request):
     return templates.TemplateResponse(request, "dashboard.html")
+
+
+@app.get(
+    "/chat-demo",
+    tags=["Interactive Chat"],
+    summary="Interface de test local interactive (Langue -> Menu -> Agent IA)",
+)
+async def chat_demo_page(request: Request):
+    return templates.TemplateResponse(request, "chat_test.html")
 
 
 @app.get(

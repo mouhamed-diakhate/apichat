@@ -80,7 +80,7 @@ class AIService:
             logger.error(f"Échec détection d'intention : {e}")
             return "general"
 
-    def process_message(self, message: str, history: list[dict]) -> AssistantReply:
+    def process_message(self, message: str, history: list[dict], language: str = "fr") -> AssistantReply:
         """Fait traiter le message par l'orchestrateur IA (le vrai travail)."""
         try:
             self._ensure()
@@ -93,7 +93,7 @@ class AIService:
                 escalade=True,
                 raison_escalade="configuration IA indisponible",
             )
-        return self._assistant.handle(message, history)
+        return self._assistant.handle(message, history, language=language)
 
 
 # Instance globale du service (le moteur lui-même est construit à la 1re utilisation).

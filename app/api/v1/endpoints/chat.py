@@ -3,32 +3,40 @@ Endpoints pour le chat avec IA et le routage Multi-Agents.
 """
 import json
 
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.auth import get_current_user
+from app.api.v1.endpoints.auth import get_current_user, get_current_user_optional
 from app.db.session import get_db
 from app.models.chat import ChatMessage
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate, ChatMessageResponse
 from app.services.ai_service import ai_service
+from app.services.session_manager import process_interactive_step
 
 router = APIRouter()
+
+
+class InteractiveMessageRequest(BaseModel):
+    session_id: str
+    message: str = ""
+    action_id: str | None = None
 
 
 @router.post(
     "/message",
     response_model=ChatMessageResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Envoyer un message à l'assistant IA",
+    summary="Envoyer un message à l'assistant IA (mode public / authentifié)",
 )
 def send_message(
     message_data: ChatMessageCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User | None = Depends(get_current_user_optional)
 ) -> ChatMessage:
     """
-    Envoie un message à l'assistant IA.
+    Envoie un message à l'assistant IA. Accessible aux visiteurs anonymes et aux membres.
     
     L'assistant va :
     1. Détecter l'intention du message (Analytics).
@@ -36,6 +44,21 @@ def send_message(
     3. Persister le message de l'utilisateur et la réponse de l'assistant (avec outils/escalade).
     4. Retourner la réponse enrichie.
     """
+    # Si utilisateur invité (non connecté), associer à l'utilisateur système "Invité"
+    if current_user is None:
+        guest_user = db.query(User).filter(User.email == "invite@texmiles.sn").first()
+        if not guest_user:
+            guest_user = User(
+                email="invite@texmiles.sn",
+                hashed_password="guest_no_login",
+                full_name="Visiteur Invité",
+                is_active=True,
+                is_superuser=False,
+            )
+            db.add(guest_user)
+            db.commit()
+            db.refresh(guest_user)
+        current_user = guest_user
     # 1. Détection d'intention (Analytics - French only for now)
     intent = ai_service.detect_intent(message_data.content)
     language = "fr"
@@ -118,3 +141,97 @@ def get_chat_history(
         .all()
     )
     return messages
+
+
+@router.post("/interactive", summary="Traiter un message interactif (Langue -> Menu -> Agent IA)")
+def interactive_chat(
+    payload: InteractiveMessageRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint de test local pour le parcours interactif :
+    1. Choix de la langue (Français 🇫🇷 / Wolof 🇸🇳 / English 🇬🇧)
+    2. Menu principal (1. Suivi colis, 2. Réclamation, 3. FAQ)
+    3. Traitement par l'Agent IA (avec outils & prompts adaptés)
+    4. Enregistrement en BD pour alimenter le Dashboard en temps réel.
+    """
+    response, session = process_interactive_step(
+        session_id=payload.session_id,
+        user_input=payload.message,
+        action_id=payload.action_id
+    )
+
+    if response is not None:
+        return response
+
+    # Si session.state == AGENT_ACTIVE : appel au moteur d'intelligence IA
+    history_list = session.history[-10:] if session.history else []
+    language = session.language or "fr"
+    
+    reply = ai_service.process_message(
+        message=payload.message,
+        history=history_list,
+        language=language
+    )
+
+    session.history.append({"role": "user", "content": payload.message})
+    session.history.append({"role": "assistant", "content": reply.texte})
+
+    # Persistance en base de données pour alimenter le Dashboard
+    try:
+        guest_user = db.query(User).filter(User.email == "invite@texmiles.sn").first()
+        if not guest_user:
+            guest_user = User(
+                email="invite@texmiles.sn",
+                hashed_password="guest_no_login",
+                full_name="Visiteur Invité",
+                is_active=True,
+                is_superuser=False,
+            )
+            db.add(guest_user)
+            db.commit()
+            db.refresh(guest_user)
+
+        intent = session.selected_service or "general"
+        if payload.message and len(payload.message.strip()) > 3:
+            try:
+                intent = ai_service.detect_intent(payload.message)
+            except Exception:
+                pass
+
+        user_msg = ChatMessage(
+            user_id=guest_user.id,
+            role="user",
+            content=payload.message,
+            intent=intent,
+            language=language
+        )
+        db.add(user_msg)
+
+        outils_json = json.dumps(reply.outils_utilises) if reply.outils_utilises else None
+        assistant_msg = ChatMessage(
+            user_id=guest_user.id,
+            role="assistant",
+            content=reply.texte,
+            intent=intent,
+            language=language,
+            escalade=reply.escalade,
+            raison_escalade=reply.raison_escalade,
+            ticket_id=reply.ticket_id,
+            outils_utilises=outils_json
+        )
+        db.add(assistant_msg)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[interactive_chat] Erreur de persistance DB : {e}")
+
+    return {
+        "text": reply.texte,
+        "buttons": [{"id": "menu_reset", "label": "🔄 Retour au Menu"}],
+        "state": session.state,
+        "language": session.language,
+        "escalade": reply.escalade,
+        "ticket_id": reply.ticket_id
+    }
+

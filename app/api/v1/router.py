@@ -18,3 +18,8 @@ api_router.include_router(chat.router, prefix="/chat", tags=["Chat IA"])
 from app.api.v1.endpoints import dashboard
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Statistiques"])
 
+# Webhook WhatsApp Meta Cloud API
+from app.api.v1.endpoints import whatsapp
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["WhatsApp Webhook"])
+
+

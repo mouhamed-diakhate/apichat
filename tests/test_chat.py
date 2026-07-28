@@ -67,12 +67,8 @@ def auth_headers(client):
 # ---------------------------------------------------------------------------
 
 def test_chat_routes_require_authentication(client):
-    """Vérifie que les routes de chat renvoient 401 si non authentifié."""
-    # POST message
-    r = client.post("/api/v1/chat/message", json={"content": "Bonjour"})
-    assert r.status_code == 401
-
-    # GET history
+    """Vérifie que la route d'historique de chat renvoie 401 si non authentifié."""
+    # GET history exige une authentification JWT
     r = client.get("/api/v1/chat/history")
     assert r.status_code == 401
 

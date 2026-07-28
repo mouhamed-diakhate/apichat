@@ -11,10 +11,11 @@ la configuration (voir app/config.py). C'est la mise en pratique de l'objectif d
 cahier des charges : pouvoir changer / comparer les modèles sans réécrire le code.
 """
 
+import ast
 import json
 import re
 
-from openai import OpenAI, BadRequestError
+from openai import OpenAI, BadRequestError, RateLimitError
 
 from .base import LLMProvider, LLMResponse, ToolCall
 
@@ -22,22 +23,24 @@ from .base import LLMProvider, LLMResponse, ToolCall
 def _recuperer_appels_mal_formes(texte: str) -> list[ToolCall]:
     """
     Récupère un appel d'outil quand le modèle l'a écrit dans un format non standard.
-
-    Certains modèles (ex. Llama sur Groq) renvoient parfois l'appel sous la forme
-    littérale `<function=nom_outil{...json...}</function>` au lieu du format attendu,
-    ce qui provoque une erreur "tool_use_failed". L'intention du modèle est pourtant
-    correcte : on l'extrait ici pour ne pas perdre la demande. Format toléré :
-    `<function=NOM{...}>` ou `<function=NOM,{...}>`.
     """
     appels: list[ToolCall] = []
-    # nom de l'outil, puis n'importe quoi jusqu'à la 1re accolade, puis l'objet JSON
-    # (plat). Tolère les espaces, une virgule, un point d'exclamation, des balises, etc.
-    for m in re.finditer(r"<function=([\w-]+)[^{]*(\{[^{}]*\})", texte, re.DOTALL):
+    cleaned = (texte or "").replace('\\"', '"').replace("\\'", "'")
+
+    for m in re.finditer(r"<function=([\w-]+)[^{]*(\{[^{}]*\})", cleaned, re.DOTALL):
+        tool_name = m.group(1)
+        json_str = m.group(2)
+        args = {}
         try:
-            args = json.loads(m.group(2))
-        except json.JSONDecodeError:
-            continue
-        appels.append(ToolCall(id=f"salvage_{len(appels)}", name=m.group(1), arguments=args))
+            args = json.loads(json_str)
+        except Exception:
+            try:
+                eval_res = ast.literal_eval(json_str)
+                if isinstance(eval_res, dict):
+                    args = eval_res
+            except Exception:
+                args = {}
+        appels.append(ToolCall(id=f"salvage_{len(appels)}", name=tool_name, arguments=args))
     return appels
 
 
@@ -108,20 +111,39 @@ class OpenAICompatibleProvider(LLMProvider):
             try:
                 completion = self.client.chat.completions.create(**kwargs)
                 break
+            except RateLimitError as e:
+                # Si le modèle actuel subit un Rate Limit (429 Tokens Per Day Exceeded),
+                # on bascule immédiatement sur un modèle de secours léger (llama-3.1-8b-instant).
+                if kwargs.get("model") != "llama-3.1-8b-instant":
+                    print(f"[LLM Fallback] Quota atteint sur '{kwargs['model']}'. Basculement sur 'llama-3.1-8b-instant'...")
+                    kwargs["model"] = "llama-3.1-8b-instant"
+                    try:
+                        completion = self.client.chat.completions.create(**kwargs)
+                        # Mettre à jour le modèle par défaut pour la suite de la session
+                        self.model = "llama-3.1-8b-instant"
+                        break
+                    except Exception:
+                        raise e
+                raise e
             except BadRequestError as e:
                 if "tool_use_failed" not in str(e):
                     raise
                 derniere_erreur = e
-                # Parade 1 : récupérer l'appel mal formaté dans le corps de l'erreur.
+                # Parade 1 : récupérer l'appel mal formaté dans le corps ou la chaîne de l'erreur.
                 corps = getattr(e, "body", None) or {}
                 brut = ""
                 if isinstance(corps, dict):
                     brut = corps.get("error", {}).get("failed_generation", "") or ""
+                if not brut:
+                    brut = str(e)
                 appels = _recuperer_appels_mal_formes(brut)
+                if not appels and brut != str(e):
+                    appels = _recuperer_appels_mal_formes(str(e))
                 if appels:
                     return LLMResponse(text="", tool_calls=appels)
                 # Parade 2 : réessayer.
                 continue
+
         if completion is None:
             raise derniere_erreur
 
@@ -136,4 +158,15 @@ class OpenAICompatibleProvider(LLMProvider):
                 args = {}
             tool_calls.append(ToolCall(id=tc.id, name=tc.function.name, arguments=args))
 
-        return LLMResponse(text=msg.content or "", tool_calls=tool_calls)
+        # Parade 3 : certains modèles (petits LLMs) écrivent l'appel d'outil sous forme
+        # de texte brut `<function=nom>{...}</function>` dans le contenu, au lieu d'utiliser
+        # le mécanisme officiel tool_calls. On les intercepte ici pour ne pas afficher
+        # ce texte technique au client.
+        texte = msg.content or ""
+        if not tool_calls and "<function=" in texte:
+            appels_dans_texte = _recuperer_appels_mal_formes(texte)
+            if appels_dans_texte:
+                return LLMResponse(text="", tool_calls=appels_dans_texte)
+
+        return LLMResponse(text=texte, tool_calls=tool_calls)
+

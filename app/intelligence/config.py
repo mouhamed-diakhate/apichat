@@ -10,8 +10,9 @@ Ajouter un fournisseur = ajouter une ligne dans le dictionnaire FOURNISSEURS.
 from pathlib import Path
 
 from app.core.config import settings
+from app.db.session import SessionLocal
 from .providers.openai_compatible import OpenAICompatibleProvider
-from .orders import MockOrderSource
+from .orders import DatabaseOrderSource, MockOrderSource
 from .faq import FaqBase
 from .orchestrator import Assistant
 
@@ -71,6 +72,7 @@ def _construire_provider():
 def build_assistant() -> Assistant:
     """Charge la config, les données, et renvoie un Assistant prêt à l'emploi."""
     provider = _construire_provider()
-    orders = MockOrderSource(str(DOSSIER_DATA / "orders.mock.json"))
+    # Source des commandes issue de la base de données PostgreSQL
+    orders = DatabaseOrderSource(SessionLocal)
     faq = FaqBase(str(DOSSIER_DATA / "faq.fr.json"))
     return Assistant(provider=provider, orders=orders, faq=faq)

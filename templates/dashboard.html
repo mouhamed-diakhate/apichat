@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TexMiles Assistant — Tableau de bord</title>
   <link rel="icon" type="image/png" href="/static/texmiles-logo.png">
-  <link rel="stylesheet" href="/static/dashboard.css?v=3">
+  <link rel="stylesheet" href="/static/dashboard.css?v=6">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -30,8 +30,8 @@
       </div>
     </div>
     <form id="login-form">
-      <input id="login-email" type="email" placeholder="Email" required>
-      <input id="login-password" type="password" placeholder="Mot de passe" required>
+      <input id="login-email" type="email" placeholder="Email" value="admin@texmiles.sn" required>
+      <input id="login-password" type="password" placeholder="Mot de passe" value="Admin1234!" required>
       <button type="submit">Se connecter</button>
       <p class="error" id="login-error"></p>
     </form>
@@ -109,28 +109,29 @@
   </div>
 
   <aside id="demo-chat">
-    <button id="demo-toggle" title="Tester l'assistant">&#x1f4ac;</button>
+    <button id="demo-toggle" title="Tester l'assistant IA">&#x1f4ac;</button>
+
     <div id="demo-panel">
       <div class="demo-header">
         <img src="/static/texmiles-logo.png" alt="" class="demo-logo" aria-hidden="true">
         <div class="demo-header-text">
           <strong>Assistant TexMiles</strong>
-          <small>Session de démonstration</small>
+          <small>Parcours complet · FR / WO / EN</small>
         </div>
         <button id="demo-close" type="button" class="demo-close" title="Fermer" aria-label="Fermer l'assistant">&times;</button>
       </div>
       <div id="demo-messages">
-        <div class="msg assistant">
-          Bonjour ! Je suis l'assistant automatisé de Texmiles. Posez-moi une question sur vos commandes, nos services, ou signalez un problème.
-        </div>
+        <!-- Messages injectés dynamiquement par dashboard.js -->
       </div>
       <form id="demo-form">
-        <input id="demo-input" type="text" placeholder="Ex: Où est ma commande ?" autocomplete="off" required>
-        <button type="submit">Envoyer</button>
+        <input id="demo-input" type="text" placeholder="Tapez votre réponse…" autocomplete="off">
+        <button type="submit">&#x27A4;</button>
       </form>
     </div>
   </aside>
 
-  <script src="/static/dashboard.js"></script>
+  <script src="/static/dashboard.js?v=6"></script>
+
+
 </body>
 </html>

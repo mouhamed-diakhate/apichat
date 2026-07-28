@@ -1,16 +1,13 @@
 """
 Source des commandes + vérification d'identité (garde-fou obligatoire).
 
-Aujourd'hui les données sont FICTIVES (MockOrderSource lit un fichier JSON).
-Demain, une vraie API commandes remplacera MockOrderSource : il suffira d'écrire
-une nouvelle classe qui hérite de OrderSource et implémente find(). Le reste du
-code (orchestrateur, outils) ne changera pas.
+Deux implémentations disponibles :
+- MockOrderSource : lit un fichier JSON (pour démo / hors-ligne).
+- DatabaseOrderSource : lit directement la table `orders` dans PostgreSQL.
 
 Règle métier importante (cahier des charges §4.2 et §5) :
 l'assistant ne doit JAMAIS divulguer les détails d'une commande sans une
-identification minimale, et doit rester prudent en cas d'incohérence. Cette règle
-est appliquée ICI, dans le code — pas seulement dans le prompt — pour qu'elle ne
-puisse pas être contournée par une formulation habile du client.
+identification minimale, et doit rester prudent en cas d'incohérence.
 """
 
 import json
@@ -18,20 +15,46 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 
-def _normaliser_tel(valeur: str) -> str:
-    """Enlève espaces, points et tirets pour comparer les numéros de façon fiable."""
+def _normaliser_numero(valeur: str) -> str:
+    """
+    Normalise un numéro de commande pour la recherche :
+    Supprime tirets (-), espaces ( ), points (.) et passe en majuscules.
+    Exemple: 'CMD-1002' -> 'CMD1002', 'cmd 1002' -> 'CMD1002'
+    """
     if not valeur:
         return ""
-    return (
+    return valeur.replace("-", "").replace(".", "").replace(" ", "").strip().upper()
+
+
+def _normaliser_tel(valeur: str) -> str:
+    """
+    Normalise un numéro de téléphone sénégalais pour la comparaison :
+    - Supprime espaces, tirets, points, parenthèses
+    - Supprime le préfixe international (+221 ou 00221) pour harmoniser
+      avec les saisies locales (ex: 770001122 == +221770001122).
+    """
+    if not valeur:
+        return ""
+    tel = (
         valeur.replace(" ", "")
         .replace(".", "")
         .replace("-", "")
+        .replace("(", "")
+        .replace(")", "")
         .strip()
     )
+    # Normaliser vers le format local (9 chiffres) sans indicatif
+    if tel.startswith("+221"):
+        tel = tel[4:]
+    elif tel.startswith("00221"):
+        tel = tel[5:]
+    elif tel.startswith("221") and len(tel) == 12:
+        tel = tel[3:]
+    return tel
 
 
 class OrderSource(ABC):
-    """Contrat d'une source de commandes (mock aujourd'hui, vraie API demain)."""
+    """Contrat d'une source de commandes."""
 
     @abstractmethod
     def find(self, numero=None, telephone=None, email=None) -> dict:
@@ -53,35 +76,36 @@ class MockOrderSource(OrderSource):
         self.commandes = donnees["commandes"]
 
     def _par_numero(self, numero: str):
-        numero = (numero or "").strip().upper()
+        num_norm = _normaliser_numero(numero)
         for c in self.commandes:
-            if c["numero"].upper() == numero:
+            if _normaliser_numero(c["numero"]) == num_norm:
                 return c
         return None
 
     def find(self, numero=None, telephone=None, email=None) -> dict:
-        numero = (numero or "").strip()
+        numero_brut = numero
+        numero = _normaliser_numero(numero or "")
         telephone = _normaliser_tel(telephone or "")
         email = (email or "").strip().lower()
 
-        # Cas 0 : le client n'a fourni aucun identifiant -> on ne peut rien faire.
         if not numero and not telephone and not email:
             return {"resultat": "identite_manquante"}
 
-        # Cas 1 : un numéro de commande est fourni (identifiant le plus précis).
         if numero:
             commande = self._par_numero(numero)
             if commande is None:
                 return {"resultat": "introuvable"}
-            # Si le client donne AUSSI un téléphone/email, ils doivent correspondre.
-            # Une incohérence est suspecte -> on ne divulgue rien (prudence).
+            if not telephone and not email:
+                return {
+                    "resultat": "confirmation_identite_requise",
+                    "consigne": "Un numéro de commande seul ne suffit pas. Demandez au client son téléphone ou son email de confirmation avant de donner le statut."
+                }
             if telephone and _normaliser_tel(commande["telephone"]) != telephone:
                 return {"resultat": "incoherence"}
             if email and commande["email"].lower() != email:
                 return {"resultat": "incoherence"}
             return {"resultat": "ok", "commande": commande}
 
-        # Cas 2 : pas de numéro, mais un téléphone ou un email (identité minimale).
         for c in self.commandes:
             if telephone and _normaliser_tel(c["telephone"]) == telephone:
                 return {"resultat": "ok", "commande": c}
@@ -89,3 +113,81 @@ class MockOrderSource(OrderSource):
                 return {"resultat": "ok", "commande": c}
 
         return {"resultat": "introuvable"}
+
+
+class DatabaseOrderSource(OrderSource):
+    """Implémentation réelle : lit les commandes directement dans PostgreSQL."""
+
+    def __init__(self, session_factory):
+        self.session_factory = session_factory
+
+    def find(self, numero=None, telephone=None, email=None) -> dict:
+        from app.models.order import Order
+
+        numero_norm = _normaliser_numero(numero or "")
+        telephone = _normaliser_tel(telephone or "")
+        email = (email or "").strip().lower()
+
+        if not numero_norm and not telephone and not email:
+            return {"resultat": "identite_manquante"}
+
+        db = self.session_factory()
+        try:
+            if numero_norm:
+                commandes = db.query(Order).all()
+                commande = None
+                for c in commandes:
+                    if _normaliser_numero(c.numero or "") == numero_norm:
+                        commande = c
+                        break
+                if not commande:
+                    return {"resultat": "introuvable"}
+
+
+                # Règle de sécurité / confidentialité : un numéro de commande seul ne suffit pas.
+                # Il faut AU MOINS un téléphone ou un email pour valider l'identité.
+                if not telephone and not email:
+                    return {
+                        "resultat": "confirmation_identite_requise",
+                        "consigne": "Un numéro de commande seul ne suffit pas. Demandez au client son téléphone ou son email de confirmation avant de donner le statut."
+                    }
+
+                if telephone and _normaliser_tel(commande.telephone or "") != telephone:
+                    return {"resultat": "incoherence"}
+                if email and (commande.email or "").lower() != email:
+                    return {"resultat": "incoherence"}
+
+                return {
+                    "resultat": "ok",
+                    "commande": {
+                        "numero": commande.numero,
+                        "client": commande.client,
+                        "telephone": commande.telephone,
+                        "email": commande.email,
+                        "statut": commande.statut,
+                        "date_estimee": commande.date_estimee,
+                        "articles": json.loads(commande.articles) if commande.articles and commande.articles.startswith("[") else commande.articles,
+                    }
+                }
+
+            commandes = db.query(Order).all()
+            for c in commandes:
+                match_tel = telephone and _normaliser_tel(c.telephone or "") == telephone
+                match_email = email and (c.email or "").lower() == email
+                if match_tel or match_email:
+                    return {
+                        "resultat": "ok",
+                        "commande": {
+                            "numero": c.numero,
+                            "client": c.client,
+                            "telephone": c.telephone,
+                            "email": c.email,
+                            "statut": c.statut,
+                            "date_estimee": c.date_estimee,
+                            "articles": json.loads(c.articles) if c.articles and c.articles.startswith("[") else c.articles,
+                        }
+                    }
+
+            return {"resultat": "introuvable"}
+        finally:
+            db.close()

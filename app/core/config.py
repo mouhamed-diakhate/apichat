@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "qwen2.5"
     MODEL: str = ""  # Laissez vide pour utiliser le modèle par défaut du provider
 
+    # WhatsApp Cloud API (Étape Meta)
+    WHATSAPP_API_TOKEN: str = ""
+    WHATSAPP_PHONE_NUMBER_ID: str = ""
+    WHATSAPP_VERIFY_TOKEN: str = "texmiles_2026"
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
