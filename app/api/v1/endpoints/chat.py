@@ -4,10 +4,11 @@ Endpoints pour le chat avec IA et le routage Multi-Agents.
 import json
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.auth import get_current_user, get_current_user_optional
+from app.core.limiter import limiter
 from app.db.session import get_db
 from app.models.chat import ChatMessage
 from app.models.user import User
@@ -30,7 +31,9 @@ class InteractiveMessageRequest(BaseModel):
     status_code=status.HTTP_201_CREATED,
     summary="Envoyer un message à l'assistant IA (mode public / authentifié)",
 )
+@limiter.limit("60/minute")
 def send_message(
+    request: Request,
     message_data: ChatMessageCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional)
@@ -144,7 +147,9 @@ def get_chat_history(
 
 
 @router.post("/interactive", summary="Traiter un message interactif (Langue -> Menu -> Agent IA)")
+@limiter.limit("30/minute")
 def interactive_chat(
+    request: Request,
     payload: InteractiveMessageRequest,
     db: Session = Depends(get_db)
 ):

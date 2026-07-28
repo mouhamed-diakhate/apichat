@@ -13,10 +13,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
+from app.core.limiter import limiter
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -42,6 +45,11 @@ async def lifespan(app: FastAPI):
     # (nettoyage à l'arrêt si nécessaire)
 
 # ---------------------------------------------------------------------------
+# Rate Limiter (anti-spam / protection API LLM)
+# ---------------------------------------------------------------------------
+# Le limiter est défini dans app.core.limiter pour éviter les imports circulaires
+
+# ---------------------------------------------------------------------------
 # Création de l'application FastAPI
 # ---------------------------------------------------------------------------
 app = FastAPI(
@@ -52,6 +60,19 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+)
+
+# Enregistrer le limiter et son handler d'erreur 429
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: JSONResponse(
+        status_code=429,
+        content={
+            "detail": "Trop de requêtes. Veuillez patienter quelques secondes avant de réessayer.",
+            "retry_after": str(exc.retry_after) if hasattr(exc, 'retry_after') else "60",
+        },
+    ),
 )
 
 # ---------------------------------------------------------------------------

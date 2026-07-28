@@ -1,0 +1,53 @@
+{
+  "_commentaire": "FAQ knowledge base (English). This file is editable WITHOUT touching the code. Add/edit entries and the assistant will use them on next startup. Each entry has 'mots_cles' (keywords) that help find the right answer.",
+  "entrees": [
+    {
+      "id": "opening_hours",
+      "question": "What are your customer service hours?",
+      "mots_cles": ["hours", "schedule", "open", "opening", "available", "contact", "when", "time"],
+      "reponse": "Our customer service team is available Monday to Saturday, from 8 AM to 8 PM. Our automated assistant is available 24/7."
+    },
+    {
+      "id": "delivery_zones",
+      "question": "Which areas do you deliver to?",
+      "mots_cles": ["zones", "area", "areas", "deliver", "delivery", "regions", "dakar", "senegal", "where", "location"],
+      "reponse": "We deliver everywhere in Senegal. Delivery is faster in Dakar and its suburbs, and we also cover all regions across the country."
+    },
+    {
+      "id": "delivery_delays",
+      "question": "How long does delivery take?",
+      "mots_cles": ["delay", "delays", "time", "days", "how long", "when", "receive", "duration", "delivery time"],
+      "reponse": "On average, delivery takes 2 to 5 business days in Dakar and 3 to 7 business days in the rest of Senegal."
+    },
+    {
+      "id": "return_policy",
+      "question": "What is your return policy?",
+      "mots_cles": ["return", "returns", "refund", "exchange", "change", "send back", "policy"],
+      "reponse": "You may return an item within 14 days of receiving it, provided it is unused and in its original packaging. Refunds are processed after verification."
+    },
+    {
+      "id": "delivery_fees",
+      "question": "How much does delivery cost?",
+      "mots_cles": ["fees", "cost", "price", "delivery cost", "free", "how much", "charge", "shipping"],
+      "reponse": "Delivery fees in Dakar are 2,000 FCFA. For other regions, fees range from 3,000 to 5,000 FCFA depending on the destination. Delivery is free for orders over 50,000 FCFA."
+    },
+    {
+      "id": "payment_methods",
+      "question": "What payment methods do you accept?",
+      "mots_cles": ["payment", "pay", "methods", "card", "wave", "orange money", "cash", "mobile money", "how to pay"],
+      "reponse": "We accept cash on delivery, Orange Money, Wave, and bank card payments."
+    },
+    {
+      "id": "track_order",
+      "question": "How can I track my order?",
+      "mots_cles": ["track", "tracking", "status", "order status", "where is", "my order", "package"],
+      "reponse": "To track your order, provide your order number (e.g. CMD-1001) along with your phone number or email address for identity verification. Our assistant will give you the real-time status."
+    },
+    {
+      "id": "damaged_item",
+      "question": "My package arrived damaged. What should I do?",
+      "mots_cles": ["damaged", "broken", "torn", "problem", "issue", "wrong", "defective", "complaint"],
+      "reponse": "We are sorry to hear that. Please contact us immediately with your order number and a photo of the damage. We will open a complaint ticket and resolve the issue within 48 hours."
+    }
+  ]
+}

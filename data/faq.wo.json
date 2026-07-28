@@ -1,0 +1,53 @@
+{
+  "_commentaire": "Base de connaissances FAQ (Wolof). Ci fayil bi mën nga soppi BËGËNA nga toucher code bi. Jëfël entrée yi walla soppi, assistant bi dinañu jëfël ci kanam bi nga restart ko. Entrée ak 'mots_cles' yi mën a dimbali na jënd tontu bi bu bare.",
+  "entrees": [
+    {
+      "id": "jamono_serbis",
+      "question": "Jamono wana lañuy jëm ci serbis client?",
+      "mots_cles": ["jamono", "waktu", "jëm", "serbis", "disponible", "xool", "heures", "ouvert"],
+      "reponse": "Sunu serbis client dafa jëm Altine ba Gaawu, 8 hg ba 20 hg. Assistant automatique bi, mu jëm 24h/24, yoon wépp."
+    },
+    {
+      "id": "bérab_livraison",
+      "question": "Fan lañuy livrer?",
+      "mots_cles": ["fan", "bérab", "livrer", "livraison", "région", "Dakar", "Sénégal", "woon", "city"],
+      "reponse": "Lañuy livrer partout ci Sénégal. Livraison bi gaaw na ci Dakar ak banlieue bi, te ñuy jëm ci dëkk ak région yépp."
+    },
+    {
+      "id": "jamono_livraison",
+      "question": "Jamono wana lañuy livrer?",
+      "mots_cles": ["jamono", "jours", "bëgg", "kanam", "délai", "waxtu", "nag", "combien", "attendre"],
+      "reponse": "Ci kaa kanam, livraison bi am na 2 ba 5 jours ouvrés ci Dakar, ak 3 ba 7 jours ouvrés ci dëkk yi nekk ci kanam."
+    },
+    {
+      "id": "politiik_yeesal",
+      "question": "Politiik yeesal bi yow nag?",
+      "mots_cles": ["yeesal", "jël", "retour", "remboursement", "échange", "soppi", "article"],
+      "reponse": "Mën nga yeesal article bi ci 14 fan bi mu yoon ci soo ko jëll, bu ko jëfëndiku walla bu emballage bi mu dul yomb. Remboursement bi dinañu ko def ba ñu xoolal."
+    },
+    {
+      "id": "prix_livraison",
+      "question": "Ñaata xaalis lañuy jëf ci livraison?",
+      "mots_cles": ["xaalis", "prix", "coût", "frais", "livraison", "ñaata", "cher", "gratuit", "yomb"],
+      "reponse": "Frais livraison yi ci Dakar mooy 2000 FCFA. Ci région yi, ñuy jëf 3000 ba 5000 FCFA, selon bérab bi. Livraison bi dul xaalis bu commande bi amoon na 50000 FCFA."
+    },
+    {
+      "id": "moyen_paiement",
+      "question": "Naka lañuy payer?",
+      "mots_cles": ["payer", "xaalis", "moyen", "paiement", "wave", "orange money", "carte", "espèces", "cash"],
+      "reponse": "Lañuy jëf: paiement ci livraison bi (espèces/cash), Orange Money, Wave, ak carte bancaire."
+    },
+    {
+      "id": "topatu_commande",
+      "question": "Naka lañu mën topatu ma commande bi?",
+      "mots_cles": ["topatu", "suivi", "commande", "statut", "fan", "bu fekke", "mboolo"],
+      "reponse": "Ngir topatu sa commande bi, jox ma nimero commande bi (ex: CMD-1001) ak nimero téléphone bi walla email bi ngir xoolal identité bi. Assistant bi dinañu jox statut bi ci kanam bi."
+    },
+    {
+      "id": "mboolo_yéeg",
+      "question": "Ma mboolo bi yéeg nag, naka lañu def?",
+      "mots_cles": ["yéeg", "xarit", "dëkk", "problème", "faute", "nañu", "ñaxtu", "réclamation"],
+      "reponse": "Mën na nu ko jaarale. Jox ma nimero commande bi ak nattu ci xarit bi waxi gannaaw. Dinañu bindal ñaxtu wanna ak dinañu ko génn ci 48h."
+    }
+  ]
+}

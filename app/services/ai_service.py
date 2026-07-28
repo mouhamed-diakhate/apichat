@@ -58,19 +58,20 @@ class AIService:
     Le moteur est construit PARESSEUSEMENT (à la 1re utilisation), pas à l'import.
     Ainsi le serveur démarre même si la clé API n'est pas encore configurée, et les
     tests (qui remplacent ces méthodes par des mocks) tournent sans aucune clé.
+    Un assistant est mis en cache PAR LANGUE pour servir la bonne FAQ sans reconstruction.
     """
 
     def __init__(self) -> None:
-        self._assistant = None  # construit à la demande via _ensure()
+        self._assistants: dict = {}  # cache {langue: Assistant}
 
-    def _ensure(self) -> None:
-        if self._assistant is None:
-            self._assistant = build_assistant()
+    def _ensure(self, language: str = "fr") -> None:
+        if language not in self._assistants:
+            self._assistants[language] = build_assistant(language=language)
 
     @property
     def provider(self):
         self._ensure()
-        return self._assistant.provider
+        return self._assistants["fr"].provider
 
     def detect_intent(self, message: str) -> str:
         """Classe le message (analytics du tableau de bord). Jamais bloquant."""
@@ -81,9 +82,9 @@ class AIService:
             return "general"
 
     def process_message(self, message: str, history: list[dict], language: str = "fr") -> AssistantReply:
-        """Fait traiter le message par l'orchestrateur IA (le vrai travail)."""
+        """Fait traiter le message par l'orchestrateur IA dans la bonne langue."""
         try:
-            self._ensure()
+            self._ensure(language=language)
         except Exception as e:
             # Erreur de configuration (ex. clé API manquante) : on répond proprement
             # au lieu de laisser planter l'API.
@@ -93,7 +94,7 @@ class AIService:
                 escalade=True,
                 raison_escalade="configuration IA indisponible",
             )
-        return self._assistant.handle(message, history, language=language)
+        return self._assistants[language].handle(message, history, language=language)
 
 
 # Instance globale du service (le moteur lui-même est construit à la 1re utilisation).

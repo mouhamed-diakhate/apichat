@@ -69,10 +69,23 @@ def _construire_provider():
     return OpenAICompatibleProvider(api_key=cle, model=modele, base_url=conf["base_url"])
 
 
-def build_assistant() -> Assistant:
-    """Charge la config, les données, et renvoie un Assistant prêt à l'emploi."""
+def build_assistant(language: str = "fr") -> Assistant:
+    """Charge la config, les données, et renvoie un Assistant prêt à l'emploi.
+
+    Args:
+        language: Code de langue ('fr', 'en', 'wo'). Détermine quelle base
+                  FAQ est chargée. Fallback automatique sur FR si le fichier
+                  de langue n'existe pas.
+    """
     provider = _construire_provider()
     # Source des commandes issue de la base de données PostgreSQL
     orders = DatabaseOrderSource(SessionLocal)
-    faq = FaqBase(str(DOSSIER_DATA / "faq.fr.json"))
+
+    # Charger la FAQ dans la langue demandée, avec fallback sur FR
+    faq_file = DOSSIER_DATA / f"faq.{language}.json"
+    if not faq_file.exists():
+        faq_file = DOSSIER_DATA / "faq.fr.json"
+
+    faq = FaqBase(str(faq_file))
     return Assistant(provider=provider, orders=orders, faq=faq)
+

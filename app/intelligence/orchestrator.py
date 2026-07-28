@@ -13,6 +13,7 @@ modèle derrière, sans rien changer ici.
 """
 
 import json
+import uuid
 from dataclasses import dataclass, field
 
 from .providers.base import LLMProvider, ToolCall
@@ -109,7 +110,6 @@ class Assistant:
         self.provider = provider
         self.orders = orders
         self.faq = faq
-        self._compteur_tickets = 0  # pour générer des numéros de ticket lisibles
 
     def handle(self, message: str, historique: list[dict] | None = None, language: str = "fr") -> AssistantReply:
         """Traite un message client et renvoie la réponse de l'assistant."""
@@ -180,11 +180,28 @@ class Assistant:
             )
             if res["resultat"] == "ok":
                 c = res["commande"]
+                # Enrichir le contexte avec un message adapté au statut
+                statut = c.get("statut", "")
+                messages_statut = {
+                    "retardée": "⚠️ La commande a pris du retard. Proposez au client d'ouvrir une réclamation si le délai est trop long.",
+                    "retardee": "⚠️ La commande a pris du retard. Proposez au client d'ouvrir une réclamation si le délai est trop long.",
+                    "livrée": "✅ La commande a été livrée. Demandez si tout s'est bien passé et si le client est satisfait.",
+                    "livree": "✅ La commande a été livrée. Demandez si tout s'est bien passé et si le client est satisfait.",
+                    "en livraison": "🚚 Le colis est en cours de livraison aujourd'hui. Encouragez le client à se tenir disponible.",
+                    "en préparation": "📦 La commande est en cours de préparation dans nos entrepôts. La livraison sera bientôt planifiée.",
+                    "en preparation": "📦 La commande est en cours de préparation dans nos entrepôts. La livraison sera bientôt planifiée.",
+                    "expédiée": "🏃 La commande a quitté nos entrepôts et est en route vers le client.",
+                    "expediee": "🏃 La commande a quitté nos entrepôts et est en route vers le client.",
+                }
+                message_ctx = messages_statut.get(statut.lower(), "")
                 return json.dumps({
                     "resultat": "ok",
                     "numero": c["numero"],
-                    "statut": c["statut"],
-                    "date_estimee": c["date_estimee"],
+                    "client": c.get("client", ""),
+                    "statut": statut,
+                    "date_estimee": c.get("date_estimee", ""),
+                    "articles": c.get("articles", []),
+                    "message_contextuel": message_ctx,
                 }, ensure_ascii=False)
             if res["resultat"] == "incoherence":
                 # Prudence : on escalade et on interdit la divulgation.
@@ -201,8 +218,8 @@ class Assistant:
             return json.dumps({"resultats": matches}, ensure_ascii=False)
 
         if tc.name == "create_complaint":
-            self._compteur_tickets += 1
-            ticket = f"REC-{self._compteur_tickets:04d}"
+            # UUID court (8 hex chars) : unique même après redémarrage ou en multi-workers
+            ticket = f"REC-{uuid.uuid4().hex[:8].upper()}"
             reply.ticket_id = ticket
             reply.escalade = True  # transmise à l'équipe réclamations (traitement humain)
             reply.raison_escalade = reply.raison_escalade or "réclamation ouverte"
