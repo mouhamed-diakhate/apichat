@@ -26,6 +26,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from app.api.v1.router import api_router
 from app.api.v1.endpoints.auth import get_current_user
 from app.db.base import Base
+from app.db.migrate import sync_sqlite_schema
 from app.db.session import engine
 
 # Importer tous les modèles pour que SQLAlchemy les détecte
@@ -39,8 +40,9 @@ import app.models.order  # noqa: F401
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Crée les tables manquantes au démarrage (idempotent)."""
+    """Crée les tables manquantes et synchronise le schéma SQLite au démarrage."""
     Base.metadata.create_all(bind=engine)
+    sync_sqlite_schema(engine)
     yield
     # (nettoyage à l'arrêt si nécessaire)
 

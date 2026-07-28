@@ -86,11 +86,15 @@ def get_conversations(
         "items": [
             {
                 "id": m.id,
+                "session_id": m.session_id,
                 "user_email": m.user.email if m.user else "inconnu",
+                "user_name": (m.user.full_name if m.user else None) or "Client Invité",
                 "intent": m.intent,
+                "language": m.language or "fr",
                 "escalade": m.escalade,
                 "raison_escalade": m.raison_escalade,
                 "ticket_id": m.ticket_id,
+                "outils_utilises": m.outils_utilises,
                 "created_at": m.created_at.isoformat(),
                 "message_preview": (m.content or "")[:120],
             }
@@ -100,3 +104,75 @@ def get_conversations(
         "page": page,
         "page_size": page_size,
     }
+
+
+@router.get(
+    "/conversations/{msg_id}",
+    summary="Détails complets d'une conversation et historique du fil",
+)
+def get_conversation_detail(
+    msg_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Retourne le détail d'un échange et la liste complète des messages du fil (session).
+    """
+    target_msg = (
+        db.query(ChatMessage)
+        .options(joinedload(ChatMessage.user))
+        .filter(ChatMessage.id == msg_id)
+        .first()
+    )
+    if not target_msg:
+        return {"error": "Conversation non trouvée"}
+
+    # Récupérer l'ensemble de la discussion (fil de la session ou même utilisateur)
+    if target_msg.session_id:
+        thread_messages = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.session_id == target_msg.session_id)
+            .order_by(ChatMessage.created_at.asc())
+            .all()
+        )
+    else:
+        thread_messages = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.user_id == target_msg.user_id)
+            .order_by(ChatMessage.created_at.asc())
+            .limit(30)
+            .all()
+        )
+
+    client_info = {
+        "email": target_msg.user.email if target_msg.user else "inconnu",
+        "full_name": (target_msg.user.full_name if target_msg.user else None) or "Visiteur / Client TexMiles",
+        "status": "Membre" if target_msg.user and target_msg.user.email != "invite@texmiles.sn" else "Visiteur Web / WhatsApp",
+    }
+
+    return {
+        "id": target_msg.id,
+        "session_id": target_msg.session_id,
+        "client": client_info,
+        "intent": target_msg.intent,
+        "language": target_msg.language or "fr",
+        "escalade": target_msg.escalade,
+        "raison_escalade": target_msg.raison_escalade,
+        "ticket_id": target_msg.ticket_id,
+        "outils_utilises": target_msg.outils_utilises,
+        "created_at": target_msg.created_at.isoformat(),
+        "messages": [
+            {
+                "id": msg.id,
+                "role": msg.role,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat(),
+                "intent": msg.intent,
+                "escalade": msg.escalade,
+                "ticket_id": msg.ticket_id,
+                "outils_utilises": msg.outils_utilises,
+            }
+            for msg in thread_messages
+        ],
+    }
+

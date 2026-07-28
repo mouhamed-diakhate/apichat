@@ -13,7 +13,6 @@ modèle derrière, sans rien changer ici.
 """
 
 import json
-import uuid
 from dataclasses import dataclass, field
 
 from .providers.base import LLMProvider, ToolCall
@@ -23,6 +22,7 @@ from .guardrails import escalade_forcee
 from .prompt_fr import SYSTEM_PROMPT_FR
 from .prompt_wo import SYSTEM_PROMPT_WO
 from .prompt_en import SYSTEM_PROMPT_EN
+from .prompt_ar import SYSTEM_PROMPT_AR
 
 
 # --- Description des outils, au format attendu par l'API (style OpenAI) ---------
@@ -53,6 +53,39 @@ OUTILS = [
                     "requete": {"type": "string", "description": "La question du client, reformulée"},
                 },
                 "required": ["requete"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_quotation",
+            "description": "Générer un devis estimatif de cotation d'expédition.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "origine": {"type": "string", "description": "Lieu de départ / origine"},
+                    "destination": {"type": "string", "description": "Lieu d'arrivée / destination"},
+                    "poids": {"type": "string", "description": "Poids ou dimensions du colis"},
+                    "type_marchandise": {"type": "string", "description": "Nature de la marchandise"},
+                },
+                "required": ["origine", "destination"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_operation",
+            "description": "Enregistrer une demande d'opération logistique (enlèvement, livraison spécifique, stockage/entreposage).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type_operation": {"type": "string", "description": "Type d'opération : enlèvement, livraison, entreposage"},
+                    "adresse": {"type": "string", "description": "Adresse concernée"},
+                    "instructions": {"type": "string", "description": "Instructions ou détails spécifiques"},
+                },
+                "required": ["type_operation"],
             },
         },
     },
@@ -110,6 +143,9 @@ class Assistant:
         self.provider = provider
         self.orders = orders
         self.faq = faq
+        self._compteur_tickets = 0  # pour générer des numéros de ticket lisibles
+        self._compteur_devis = 0
+        self._compteur_ops = 0
 
     def handle(self, message: str, historique: list[dict] | None = None, language: str = "fr") -> AssistantReply:
         """Traite un message client et renvoie la réponse de l'assistant."""
@@ -121,6 +157,8 @@ class Assistant:
             system_prompt = SYSTEM_PROMPT_WO
         elif language == "en":
             system_prompt = SYSTEM_PROMPT_EN
+        elif language == "ar":
+            system_prompt = SYSTEM_PROMPT_AR
         else:
             system_prompt = SYSTEM_PROMPT_FR
 
@@ -180,28 +218,11 @@ class Assistant:
             )
             if res["resultat"] == "ok":
                 c = res["commande"]
-                # Enrichir le contexte avec un message adapté au statut
-                statut = c.get("statut", "")
-                messages_statut = {
-                    "retardée": "⚠️ La commande a pris du retard. Proposez au client d'ouvrir une réclamation si le délai est trop long.",
-                    "retardee": "⚠️ La commande a pris du retard. Proposez au client d'ouvrir une réclamation si le délai est trop long.",
-                    "livrée": "✅ La commande a été livrée. Demandez si tout s'est bien passé et si le client est satisfait.",
-                    "livree": "✅ La commande a été livrée. Demandez si tout s'est bien passé et si le client est satisfait.",
-                    "en livraison": "🚚 Le colis est en cours de livraison aujourd'hui. Encouragez le client à se tenir disponible.",
-                    "en préparation": "📦 La commande est en cours de préparation dans nos entrepôts. La livraison sera bientôt planifiée.",
-                    "en preparation": "📦 La commande est en cours de préparation dans nos entrepôts. La livraison sera bientôt planifiée.",
-                    "expédiée": "🏃 La commande a quitté nos entrepôts et est en route vers le client.",
-                    "expediee": "🏃 La commande a quitté nos entrepôts et est en route vers le client.",
-                }
-                message_ctx = messages_statut.get(statut.lower(), "")
                 return json.dumps({
                     "resultat": "ok",
                     "numero": c["numero"],
-                    "client": c.get("client", ""),
-                    "statut": statut,
-                    "date_estimee": c.get("date_estimee", ""),
-                    "articles": c.get("articles", []),
-                    "message_contextuel": message_ctx,
+                    "statut": c["statut"],
+                    "date_estimee": c["date_estimee"],
                 }, ensure_ascii=False)
             if res["resultat"] == "incoherence":
                 # Prudence : on escalade et on interdit la divulgation.
@@ -217,9 +238,31 @@ class Assistant:
             matches = self.faq.search(tc.arguments.get("requete", ""))
             return json.dumps({"resultats": matches}, ensure_ascii=False)
 
+        if tc.name == "create_quotation":
+            self._compteur_devis += 1
+            devis_id = f"COT-{self._compteur_devis:04d}"
+            reply.ticket_id = devis_id
+            return json.dumps({
+                "cotation_id": devis_id,
+                "statut": "devis_généré",
+                "estimation_tarif": "15 000 FCFA (tarif estimatif)",
+                "delai_livraison": "24 à 48 heures",
+                "consigne": "Présente cette estimation au client avec le numéro de référence du devis."
+            }, ensure_ascii=False)
+
+        if tc.name == "create_operation":
+            self._compteur_ops += 1
+            op_id = f"OPS-{self._compteur_ops:04d}"
+            reply.ticket_id = op_id
+            return json.dumps({
+                "operation_id": op_id,
+                "statut": "demande_enregistrée",
+                "consigne": "Confirme au client que la demande d'opération est prise en compte et qu'un agent logistique le contactera."
+            }, ensure_ascii=False)
+
         if tc.name == "create_complaint":
-            # UUID court (8 hex chars) : unique même après redémarrage ou en multi-workers
-            ticket = f"REC-{uuid.uuid4().hex[:8].upper()}"
+            self._compteur_tickets += 1
+            ticket = f"REC-{self._compteur_tickets:04d}"
             reply.ticket_id = ticket
             reply.escalade = True  # transmise à l'équipe réclamations (traitement humain)
             reply.raison_escalade = reply.raison_escalade or "réclamation ouverte"
