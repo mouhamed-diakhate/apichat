@@ -22,6 +22,7 @@ from .guardrails import escalade_forcee
 from .prompt_fr import SYSTEM_PROMPT_FR
 from .prompt_wo import SYSTEM_PROMPT_WO
 from .prompt_en import SYSTEM_PROMPT_EN
+from .prompt_ar import SYSTEM_PROMPT_AR
 
 
 # --- Description des outils, au format attendu par l'API (style OpenAI) ---------
@@ -52,6 +53,39 @@ OUTILS = [
                     "requete": {"type": "string", "description": "La question du client, reformulée"},
                 },
                 "required": ["requete"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_quotation",
+            "description": "Générer un devis estimatif de cotation d'expédition.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "origine": {"type": "string", "description": "Lieu de départ / origine"},
+                    "destination": {"type": "string", "description": "Lieu d'arrivée / destination"},
+                    "poids": {"type": "string", "description": "Poids ou dimensions du colis"},
+                    "type_marchandise": {"type": "string", "description": "Nature de la marchandise"},
+                },
+                "required": ["origine", "destination"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_operation",
+            "description": "Enregistrer une demande d'opération logistique (enlèvement, livraison spécifique, stockage/entreposage).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "type_operation": {"type": "string", "description": "Type d'opération : enlèvement, livraison, entreposage"},
+                    "adresse": {"type": "string", "description": "Adresse concernée"},
+                    "instructions": {"type": "string", "description": "Instructions ou détails spécifiques"},
+                },
+                "required": ["type_operation"],
             },
         },
     },
@@ -110,6 +144,8 @@ class Assistant:
         self.orders = orders
         self.faq = faq
         self._compteur_tickets = 0  # pour générer des numéros de ticket lisibles
+        self._compteur_devis = 0
+        self._compteur_ops = 0
 
     def handle(self, message: str, historique: list[dict] | None = None, language: str = "fr") -> AssistantReply:
         """Traite un message client et renvoie la réponse de l'assistant."""
@@ -121,6 +157,8 @@ class Assistant:
             system_prompt = SYSTEM_PROMPT_WO
         elif language == "en":
             system_prompt = SYSTEM_PROMPT_EN
+        elif language == "ar":
+            system_prompt = SYSTEM_PROMPT_AR
         else:
             system_prompt = SYSTEM_PROMPT_FR
 
@@ -199,6 +237,28 @@ class Assistant:
         if tc.name == "search_faq":
             matches = self.faq.search(tc.arguments.get("requete", ""))
             return json.dumps({"resultats": matches}, ensure_ascii=False)
+
+        if tc.name == "create_quotation":
+            self._compteur_devis += 1
+            devis_id = f"COT-{self._compteur_devis:04d}"
+            reply.ticket_id = devis_id
+            return json.dumps({
+                "cotation_id": devis_id,
+                "statut": "devis_généré",
+                "estimation_tarif": "15 000 FCFA (tarif estimatif)",
+                "delai_livraison": "24 à 48 heures",
+                "consigne": "Présente cette estimation au client avec le numéro de référence du devis."
+            }, ensure_ascii=False)
+
+        if tc.name == "create_operation":
+            self._compteur_ops += 1
+            op_id = f"OPS-{self._compteur_ops:04d}"
+            reply.ticket_id = op_id
+            return json.dumps({
+                "operation_id": op_id,
+                "statut": "demande_enregistrée",
+                "consigne": "Confirme au client que la demande d'opération est prise en compte et qu'un agent logistique le contactera."
+            }, ensure_ascii=False)
 
         if tc.name == "create_complaint":
             self._compteur_tickets += 1

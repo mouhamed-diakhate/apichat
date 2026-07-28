@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TexMiles Assistant — Tableau de bord</title>
   <link rel="icon" type="image/png" href="/static/texmiles-logo.png">
-  <link rel="stylesheet" href="/static/dashboard.css?v=6">
+  <link rel="stylesheet" href="/static/dashboard.css?v=10">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -75,10 +75,12 @@
       <section class="filters">
         <select id="filter-intent">
           <option value="">Toutes intentions</option>
-          <option value="faq">FAQ</option>
           <option value="tracking">Suivi</option>
+          <option value="quotation">Cotation</option>
+          <option value="operation">Opération</option>
           <option value="claim">Réclamation</option>
-          <option value="human">Humain</option>
+          <option value="faq">FAQ</option>
+          <option value="human">Escalade humaine</option>
           <option value="general">Général</option>
         </select>
         <select id="filter-escalade">
@@ -95,10 +97,11 @@
             <tr>
               <th>Date</th>
               <th>Client</th>
-              <th>Intention</th>
+              <th>Intention / Service</th>
+              <th>Langue</th>
               <th>Statut</th>
-              <th>Ticket</th>
-              <th>Aperçu</th>
+              <th>Référence</th>
+              <th>Dernier message</th>
             </tr>
           </thead>
           <tbody id="conv-body"></tbody>
@@ -108,15 +111,70 @@
     </main>
   </div>
 
+  <!-- Panneau latéral de détails de discussion -->
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+  <aside id="conv-drawer" class="conv-drawer">
+    <div class="drawer-header">
+      <div class="drawer-client-info">
+        <div class="drawer-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <h3 id="drawer-client-name">Détails client</h3>
+          <p id="drawer-client-email" class="drawer-sub">client@example.com</p>
+        </div>
+      </div>
+      <button id="drawer-close" class="drawer-close-btn">&times;</button>
+    </div>
+
+    <div class="drawer-meta-grid">
+      <div class="meta-item">
+        <small>Service / Intention</small>
+        <strong id="drawer-intent">—</strong>
+      </div>
+      <div class="meta-item">
+        <small>Langue</small>
+        <strong id="drawer-lang">—</strong>
+      </div>
+      <div class="meta-item">
+        <small>Statut Traitement</small>
+        <strong id="drawer-status">—</strong>
+      </div>
+      <div class="meta-item">
+        <small>Réf / Ticket</small>
+        <strong id="drawer-ticket">—</strong>
+      </div>
+    </div>
+
+    <div class="drawer-section-title">Transcription complète WhatsApp / Web</div>
+    <div id="drawer-transcript" class="drawer-transcript">
+      <!-- Discussion injectée dynamiquement -->
+    </div>
+
+    <div class="drawer-actions">
+      <button id="btn-resolve-claim" class="action-btn resolve">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        Marquer comme traité
+      </button>
+      <button id="btn-contact-client" class="action-btn whatsapp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+        Contacter sur WhatsApp
+      </button>
+    </div>
+  </aside>
+
+  <!-- Widget Simulator WhatsApp -->
   <aside id="demo-chat">
-    <button id="demo-toggle" title="Tester l'assistant IA">&#x1f4ac;</button>
+    <button id="demo-toggle" title="Tester l'assistant IA WhatsApp">&#x1f4ac;</button>
 
     <div id="demo-panel">
       <div class="demo-header">
-        <img src="/static/texmiles-logo.png" alt="" class="demo-logo" aria-hidden="true">
+        <div class="wa-header-avatar">
+          <img src="/static/texmiles-logo.png" alt="TexMiles" class="demo-logo">
+        </div>
         <div class="demo-header-text">
-          <strong>Assistant TexMiles</strong>
-          <small>Parcours complet · FR / WO / EN</small>
+          <strong>TexMiles WhatsApp IA 🟢</strong>
+          <small>Assistant Virtuel · 🇫🇷 🇸🇳 🇬🇧 🇸🇦</small>
         </div>
         <button id="demo-close" type="button" class="demo-close" title="Fermer" aria-label="Fermer l'assistant">&times;</button>
       </div>
@@ -124,13 +182,13 @@
         <!-- Messages injectés dynamiquement par dashboard.js -->
       </div>
       <form id="demo-form">
-        <input id="demo-input" type="text" placeholder="Tapez votre réponse…" autocomplete="off">
+        <input id="demo-input" type="text" placeholder="Écrivez un message WhatsApp..." autocomplete="off">
         <button type="submit">&#x27A4;</button>
       </form>
     </div>
   </aside>
 
-  <script src="/static/dashboard.js?v=6"></script>
+  <script src="/static/dashboard.js?v=8"></script>
 
 
 </body>

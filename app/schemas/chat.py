@@ -24,6 +24,7 @@ class ChatMessageResponse(BaseModel):
     raison_escalade: str | None = None
     ticket_id: str | None = None
     outils_utilises: str | None = None
+    session_id: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -143,6 +143,114 @@ function renderCharts(data) {
 
 // ─── Tableau conversations ────────────────────────────────────────────────────
 
+// ─── Icônes SVG (style Lucide, prennent la couleur du texte) ─────────────────
+
+function svgIcon(inner) {
+  return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+}
+
+var ICONS = {
+  tracking: svgIcon('<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>'),
+  quotation: svgIcon('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M8 11h8"/><path d="M8 15h5"/>'),
+  operation: svgIcon('<path d="M14 18V6a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>'),
+  claim: svgIcon('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
+  faq: svgIcon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'),
+  human: svgIcon('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  general: svgIcon('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'),
+  check: svgIcon('<path d="M20 6 9 17l-5-5"/>'),
+  alert: svgIcon('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
+  tool: svgIcon('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z"/>')
+};
+
+// ─── Libellés (langue en pastille de code, intention avec icône) ─────────────
+
+var LANG_INFO = { wo: ['WO', 'Wolof'], en: ['EN', 'English'], ar: ['AR', 'العربية'], fr: ['FR', 'Français'] };
+
+function getLanguageFlag(lang) {
+  var v = LANG_INFO[lang] || LANG_INFO.fr;
+  return '<span class="lang-code">' + v[0] + '</span>' + v[1];
+}
+
+var INTENT_INFO = {
+  tracking: 'Suivi', quotation: 'Cotation', operation: 'Opération',
+  claim: 'Réclamation', faq: 'FAQ', human: 'Escalade'
+};
+
+function getIntentLabel(intent) {
+  var key = INTENT_INFO[intent] ? intent : 'general';
+  var label = INTENT_INFO[intent] || 'Général';
+  return '<span class="intent-badge ' + key + '">' + (ICONS[key] || ICONS.general) + '<span>' + label + '</span></span>';
+}
+
+// ─── Drawer Detail Conversation ──────────────────────────────────────────────
+
+async function openDrawer(msgId) {
+  var drawer = document.getElementById('conv-drawer');
+  var overlay = document.getElementById('drawer-overlay');
+  var transcript = document.getElementById('drawer-transcript');
+  if (!drawer || !overlay || !transcript) return;
+
+  try {
+    transcript.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)">Chargement de la discussion...</div>';
+    drawer.classList.add('active');
+    overlay.classList.add('active');
+
+    var data = await fetchJSONWithAuth('/api/v1/dashboard/conversations/' + msgId);
+    if (data.error) {
+      transcript.innerHTML = '<div style="color:var(--danger);padding:1rem;">Erreur: ' + data.error + '</div>';
+      return;
+    }
+
+    // Infos en-tête client
+    document.getElementById('drawer-client-name').textContent = data.client ? data.client.full_name : 'Client Invité';
+    document.getElementById('drawer-client-email').textContent = data.client ? data.client.email : 'Visiteur';
+    document.getElementById('drawer-intent').innerHTML = getIntentLabel(data.intent);
+    document.getElementById('drawer-lang').innerHTML = '<span class="lang-flag">' + getLanguageFlag(data.language) + '</span>';
+
+    var statusHtml = data.escalade
+      ? '<span class="status-inline danger">' + ICONS.alert + ' Escaladé (' + (data.raison_escalade || 'Humain') + ')</span>'
+      : '<span class="status-inline success">' + ICONS.check + ' Traité par l\'IA</span>';
+    document.getElementById('drawer-status').innerHTML = statusHtml;
+
+    document.getElementById('drawer-ticket').textContent = data.ticket_id || '—';
+
+    // Rendu de la transcription
+    transcript.innerHTML = '';
+    if (!data.messages || data.messages.length === 0) {
+      transcript.innerHTML = '<div style="text-align:center;color:var(--text-muted)">Aucun message enregistré.</div>';
+      return;
+    }
+
+    data.messages.forEach(function (m) {
+      var div = document.createElement('div');
+      div.className = 't-msg ' + (m.role === 'user' ? 'user' : 'assistant');
+
+      var contentFormatted = (m.content || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+      var timeStr = formatDate(m.created_at);
+
+      var toolsBadge = m.outils_utilises ? '<div class="t-tool">' + ICONS.tool + ' Outil: ' + m.outils_utilises + '</div>' : '';
+
+      div.innerHTML = contentFormatted + toolsBadge + '<span class="t-msg-time">' + timeStr + '</span>';
+      transcript.appendChild(div);
+    });
+
+    transcript.scrollTop = transcript.scrollHeight;
+  } catch (err) {
+    console.error('Erreur ouverture drawer:', err);
+    transcript.innerHTML = '<div style="color:var(--danger);padding:1rem;">Erreur de chargement: ' + err.message + '</div>';
+  }
+}
+
+function closeDrawer() {
+  var drawer = document.getElementById('conv-drawer');
+  var overlay = document.getElementById('drawer-overlay');
+  if (drawer) drawer.classList.remove('active');
+  if (overlay) overlay.classList.remove('active');
+}
+
+// ─── Tableau conversations ────────────────────────────────────────────────────
+
 async function loadConversations() {
   var params = new URLSearchParams({ page: page, page_size: 20 });
   if (currentFilter.intent) params.set('intent', currentFilter.intent);
@@ -154,23 +262,30 @@ async function loadConversations() {
     tbody.innerHTML = '';
 
     if (data.items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Aucune conversation</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Aucune conversation</td></tr>';
       return;
     }
 
     data.items.forEach(function (item) {
       var tr = document.createElement('tr');
+      tr.className = 'clickable-row';
       var statusClass = item.escalade ? 'status-escalated' : 'status-resolved';
       var statusText = item.escalade ? (item.raison_escalade || 'Escaladé') : 'Résolu';
       var ticket = item.ticket_id ? '<span class="ticket-link">' + item.ticket_id + '</span>' : '—';
 
       tr.innerHTML =
         '<td>' + formatDate(item.created_at) + '</td>' +
-        '<td>' + maskEmail(item.user_email) + '</td>' +
-        '<td>' + (item.intent || '—') + '</td>' +
+        '<td><strong>' + maskEmail(item.user_email) + '</strong></td>' +
+        '<td>' + getIntentLabel(item.intent) + '</td>' +
+        '<td><span class="lang-flag">' + getLanguageFlag(item.language) + '</span></td>' +
         '<td class="' + statusClass + '">' + statusText + '</td>' +
         '<td>' + ticket + '</td>' +
         '<td class="preview-text" title="' + item.message_preview + '">' + item.message_preview + '</td>';
+
+      tr.addEventListener('click', function () {
+        openDrawer(item.id);
+      });
+
       tbody.appendChild(tr);
     });
 
@@ -188,7 +303,7 @@ async function loadConversations() {
     }
   } catch (err) {
     document.getElementById('conv-body').innerHTML =
-      '<tr><td colspan="6" style="text-align:center;color:var(--danger)">Erreur: ' + err.message + '</td></tr>';
+      '<tr><td colspan="7" style="text-align:center;color:var(--danger)">Erreur: ' + err.message + '</td></tr>';
   }
 }
 
@@ -421,6 +536,30 @@ document.addEventListener('DOMContentLoaded', function () {
       appendDemoMessage('user', text, []);
       input.value = '';
       sendInteractiveMessage(text, null);
+    });
+  }
+
+  // --- Drawer event listeners ---
+  var drawerClose = document.getElementById('drawer-close');
+  var drawerOverlay = document.getElementById('drawer-overlay');
+  var btnResolve = document.getElementById('btn-resolve-claim');
+  var btnWhatsapp = document.getElementById('btn-contact-client');
+
+  if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
+  if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+
+  if (btnResolve) {
+    btnResolve.addEventListener('click', function () {
+      alert('Statut mis à jour : traité par l\'équipe TexMiles.');
+      closeDrawer();
+      loadStats();
+      loadConversations();
+    });
+  }
+
+  if (btnWhatsapp) {
+    btnWhatsapp.addEventListener('click', function () {
+      window.open('https://wa.me/221770000000?text=Bonjour%20TexMiles%20service%20client', '_blank');
     });
   }
 
