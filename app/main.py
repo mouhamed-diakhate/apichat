@@ -13,26 +13,64 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
-from app.core.limiter import limiter
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from app.api.v1.router import api_router
 from app.api.v1.endpoints.auth import get_current_user
 from app.db.base import Base
-from app.db.migrate import sync_sqlite_schema
 from app.db.session import engine
 
 # Importer tous les modèles pour que SQLAlchemy les détecte
 import app.models.user  # noqa: F401
 import app.models.chat  # noqa: F401
 import app.models.order  # noqa: F401
+import app.models.session  # noqa: F401
+
+
+def ensure_db_schema_and_admin():
+    """Effectue les migrations légères (ajout de session_id dans PostgreSQL/SQLite) et crée l'admin par défaut."""
+    from app.db.session import SessionLocal
+    from app.models.user import User
+    from app.core.security import hash_password
+    from sqlalchemy import text
+
+    # 1. Migrations légères sans Alembic
+    try:
+        with engine.begin() as conn:
+            # Colonne session_id dans chat_messages (ajoutée lors de la session précédente)
+            conn.execute(text("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);"))
+            # Index sur conversation_sessions.updated_at pour les requêtes de cleanup TTL
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_conversation_sessions_updated_at "
+                "ON conversation_sessions (updated_at);"
+            ))
+    except Exception:
+        pass
+
+
+    # 2. Créer l'administrateur par défaut s'il n'existe pas déjà
+    db = SessionLocal()
+    try:
+        admin = db.query(User).filter(User.email == "admin@texmiles.sn").first()
+        if not admin:
+            admin = User(
+                email="admin@texmiles.sn",
+                hashed_password=hash_password("Admin1234!"),
+                full_name="Administrateur TexMiles",
+                is_active=True,
+                is_superuser=True,
+            )
+            db.add(admin)
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -40,16 +78,14 @@ import app.models.order  # noqa: F401
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Crée les tables manquantes et synchronise le schéma SQLite au démarrage."""
+    """Crée les tables manquantes, migre le schéma et crée l'administrateur par défaut au démarrage (idempotent)."""
+    from app.core.logging import setup_logging
+    setup_logging(log_level="INFO", json_format=True)
     Base.metadata.create_all(bind=engine)
-    sync_sqlite_schema(engine)
+    ensure_db_schema_and_admin()
     yield
     # (nettoyage à l'arrêt si nécessaire)
 
-# ---------------------------------------------------------------------------
-# Rate Limiter (anti-spam / protection API LLM)
-# ---------------------------------------------------------------------------
-# Le limiter est défini dans app.core.limiter pour éviter les imports circulaires
 
 # ---------------------------------------------------------------------------
 # Création de l'application FastAPI
@@ -62,19 +98,6 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-)
-
-# Enregistrer le limiter et son handler d'erreur 429
-app.state.limiter = limiter
-app.add_exception_handler(
-    RateLimitExceeded,
-    lambda request, exc: JSONResponse(
-        status_code=429,
-        content={
-            "detail": "Trop de requêtes. Veuillez patienter quelques secondes avant de réessayer.",
-            "retry_after": str(exc.retry_after) if hasattr(exc, 'retry_after') else "60",
-        },
-    ),
 )
 
 # ---------------------------------------------------------------------------

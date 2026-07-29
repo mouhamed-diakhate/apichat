@@ -19,17 +19,33 @@ def _normaliser(texte: str) -> str:
 
 # Le client demande explicitement un humain.
 _DEMANDE_HUMAIN = [
+    # Français
     "parler a un humain", "parler a quelqu un", "un humain", "un vrai agent",
     "un agent", "un conseiller", "une personne", "quelqu un de reel",
-    "service client humain", "un operateur", "un vrai gens",
+    "service client humain", "un operateur", "un vrai gens", "un responsable",
+    "un chef", "passez moi quelqu un", "je veux un humain",
+    # English
+    "speak to a human", "talk to a human", "real person", "human agent",
+    "speak to a representative", "customer service agent", "real agent",
+    # Wolof
+    "bëgg na waxtaan ak nit", "wooko ma nit", "jox ma responsable",
+    "jox ma borom", "dinaa waxtaan ak nit dëgg", "woxal ma ak nit",
 ]
 
 # Signes de forte insatisfaction / colère.
 _COLERE = [
+    # Français
     "inadmissible", "inacceptable", "scandale", "scandaleux", "honteux", "honte",
     "j en ai marre", "marre", "furieux", "en colere", "arnaque", "arnaqueur",
     "vous vous moquez", "nul", "lamentable", "c est une blague", "voleurs",
-    "porter plainte", "avocat",
+    "porter plainte", "avocat", "toujours rien", "service mediocre",
+    "remboursez moi", "remboursement immediat", "trop long", "ras le bol",
+    # English
+    "unacceptable", "scam", "scammers", "ridiculous", "refund my money",
+    "terrible service", "horrible", "angry", "furious", "disgusted",
+    # Wolof
+    "mer na", "jaaxle na", "dara doxul", "amul benn yoon", "du yoon",
+    "fen ngen", "bëgguma lii", "ay voleur ngen", "sàcc ngen",
 ]
 
 
@@ -46,3 +62,4 @@ def escalade_forcee(message: str) -> str | None:
         if motif in t:
             return "insatisfaction forte / colère détectée"
     return None
+

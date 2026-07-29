@@ -13,11 +13,15 @@ cahier des charges : pouvoir changer / comparer les modèles sans réécrire le 
 
 import ast
 import json
+import logging
 import re
 
 from openai import OpenAI, BadRequestError, RateLimitError
 
 from .base import LLMProvider, LLMResponse, ToolCall
+
+logger = logging.getLogger(__name__)
+
 
 
 def _recuperer_appels_mal_formes(texte: str) -> list[ToolCall]:
@@ -115,8 +119,12 @@ class OpenAICompatibleProvider(LLMProvider):
                 # Si le modèle actuel subit un Rate Limit (429 Tokens Per Day Exceeded),
                 # on bascule immédiatement sur un modèle de secours léger (llama-3.1-8b-instant).
                 if kwargs.get("model") != "llama-3.1-8b-instant":
-                    print(f"[LLM Fallback] Quota atteint sur '{kwargs['model']}'. Basculement sur 'llama-3.1-8b-instant'...")
+                    logger.warning(
+                        f"[LLM Fallback] Quota atteint sur '{kwargs['model']}'. Basculement sur 'llama-3.1-8b-instant'...",
+                        extra={"previous_model": kwargs['model'], "fallback_model": "llama-3.1-8b-instant"}
+                    )
                     kwargs["model"] = "llama-3.1-8b-instant"
+
                     try:
                         completion = self.client.chat.completions.create(**kwargs)
                         # Mettre à jour le modèle par défaut pour la suite de la session

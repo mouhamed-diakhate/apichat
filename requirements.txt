@@ -35,6 +35,3 @@ openai>=1.30.0
 # --- Développement & Tests ---
 pytest>=8.0.0
 httpx>=0.27.0
-
-# --- Sécurité & Protection ---
-slowapi>=0.1.9            # Rate limiting anti-spam sur les endpoints LLM

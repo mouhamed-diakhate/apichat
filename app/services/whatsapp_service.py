@@ -84,6 +84,41 @@ class WhatsAppService:
 
         return self._send_request(payload)
 
+    def send_contact_message(self, to: str, name: str, phone: str) -> bool:
+        """
+        Envoie une carte de contact WhatsApp cliquable (vCard native Meta).
+        Permet au client de composer directement le numéro de la réceptionniste.
+        """
+        token = settings.WHATSAPP_API_TOKEN
+        phone_id = settings.WHATSAPP_PHONE_NUMBER_ID
+        if not token or not phone_id:
+            logger.warning("[WhatsApp] Identifiants WhatsApp manquants dans .env")
+            return False
+
+        clean_to = to.replace("+", "").replace(" ", "").strip()
+        clean_phone = phone.replace(" ", "").strip()
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": clean_to,
+            "type": "contacts",
+            "contacts": [{
+                "name": {
+                    "formatted_name": name,
+                    "first_name": name,
+                },
+                "phones": [{
+                    "phone": clean_phone,
+                    "type": "WORK",
+                    "wa_id": clean_phone.replace("+", "")
+                }]
+            }]
+        }
+
+        return self._send_request(payload)
+
+
     def _send_request(self, payload: dict) -> bool:
         """Exécute la requête HTTP POST vers l'API Graph de Meta."""
         token = settings.WHATSAPP_API_TOKEN
@@ -98,13 +133,12 @@ class WhatsAppService:
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
-                logger.info(f"[WhatsApp OK] Message envoyé avec succès : {result}")
-                print(f"[WhatsApp OK] Message envoyé avec succès à {payload.get('to')}")
+                logger.info(f"[WhatsApp OK] Message envoyé avec succès à {payload.get('to')}", extra={"to": payload.get("to"), "result": result})
                 return True
         except Exception as e:
-            logger.error(f"[WhatsApp Erreur] Échec d'envoi Meta API : {e}")
-            print(f"[WhatsApp Erreur] {e}")
+            logger.error(f"[WhatsApp Erreur] Échec d'envoi Meta API : {e}", extra={"to": payload.get("to")})
             return False
+
 
 
 # Singleton réutilisable

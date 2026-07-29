@@ -14,9 +14,12 @@ Les choix fixes (transport, oui/non) sont des BOUTONS ; les infos libres
 (provenance, destination, pickup) sont saisies une par une.
 """
 
+import logging
 import random
 import unicodedata
 from typing import Any, Dict, Optional, Tuple
+
+logger = logging.getLogger("session_manager")
 
 
 class SessionState:
@@ -54,10 +57,49 @@ class UserSession:
 _SESSIONS: Dict[str, UserSession] = {}
 
 
-def get_or_create_session(session_id: str) -> UserSession:
-    if session_id not in _SESSIONS:
-        _SESSIONS[session_id] = UserSession(session_id)
-    return _SESSIONS[session_id]
+def get_or_create_session(session_id: str, db=None) -> UserSession:
+    """Retourne la session depuis le cache RAM, en la restaurant depuis la BD si possible."""
+    if session_id in _SESSIONS:
+        return _SESSIONS[session_id]
+
+    session = UserSession(session_id)
+
+    # Tentative de restauration depuis la BD (si une connexion est disponible)
+    if db is not None:
+        try:
+            from app.services.session_store import SessionStore
+            stored = SessionStore.load(db, session_id)
+            if stored:
+                session.state = stored["state"]
+                session.language = stored["language"]
+                session.selected_mode = stored["selected_mode"]
+                session.selected_service = stored["selected_service"]
+                session.history = stored["history"]
+                session.data = stored["data"]
+                logger.debug(f"[Session] Restaurée depuis BD : {session_id} (state={session.state})")
+        except Exception as e:
+            logger.warning(f"[Session] Échec restauration BD pour {session_id} : {e}")
+
+    _SESSIONS[session_id] = session
+    return session
+
+
+def _persist_session(session: UserSession, db=None) -> None:
+    """Sauvegarde best-effort l'état de la session en BD."""
+    if db is None:
+        return
+    try:
+        from app.services.session_store import SessionStore
+        SessionStore.save(db, session.session_id, {
+            "state": session.state,
+            "language": session.language,
+            "selected_mode": session.selected_mode,
+            "selected_service": session.selected_service,
+            "history": session.history,
+            "data": session.data,
+        })
+    except Exception as e:
+        logger.warning(f"[Session] Échec sauvegarde BD pour {session.session_id} : {e}")
 
 
 # ─── Menus d'accueil (langue / mode) ─────────────────────────────────────────
@@ -334,9 +376,10 @@ def process_interactive_step(
     session_id: str,
     user_input: str,
     action_id: Optional[str] = None,
+    db=None,
 ) -> Tuple[Optional[Dict[str, Any]], UserSession]:
     """Traite une interaction et renvoie (réponse, session). réponse=None => agent IA."""
-    session = get_or_create_session(session_id)
+    session = get_or_create_session(session_id, db=db)
     text_clean = (user_input or "").strip().lower()
 
     # Retour au MENU PRINCIPAL (langue conservée)
@@ -427,11 +470,13 @@ def process_interactive_step(
         if action_id == "service_tracking" or text_clean in ["1", "suivi", "colis", "tracking", "topatu", "تتبع"]:
             session.selected_service = "tracking"
             session.state = SessionState.AGENT_ACTIVE
+            session.history = []  # Réinitialiser l'historique pour ne conserver que le fil du suivi
             ask = {"fr": "📦 *Suivi d'opération*\nDonnez-moi votre numéro de commande (ex : `CMD1002`).",
                    "en": "📦 *Operation tracking*\nPlease give me your order number (e.g. `CMD1002`).",
                    "wo": "📦 *Topatu opération*\nJox ma numéro commande bi (ex: `CMD1002`).",
                    "ar": "📦 *تتبع العملية*\nأدخل رقم الطلب (مثال: `CMD1002`)."}[lang]
             return _resp(ask, [_back_button(lang)], session, service="tracking"), session
+
 
         # 2) Demande d'opération -> parcours guidé
         if action_id == "service_operation" or text_clean in ["2", "opération", "operation", "opsiyoŋ", "عملية"]:
@@ -514,8 +559,11 @@ def process_interactive_step(
         summary = f"Opération : {d.get('origin')} → {d.get('destination')} ({TRANSPORT_NAME['fr'][d.get('transport','routier')]}), pickup: {d.get('pickup')}"
         session.state = SessionState.AWAITING_MENU
         session.data = {}
-        return _resp(body, [_back_button(lang)], session,
+        result = _resp(body, [_back_button(lang)], session,
                      persist=True, intent="operation", reference=op_ref, user_summary=summary), session
+        _persist_session(session, db=db)
+        return result
 
     # ── ÉTAPE 4 : Agent IA (question libre / suivi) ───────────────────────────
+    _persist_session(session, db=db)
     return None, session

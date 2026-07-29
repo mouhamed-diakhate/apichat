@@ -36,15 +36,18 @@ def get_stats(
     languages_db = db.query(ChatMessage.language, func.count(ChatMessage.id)).filter(ChatMessage.role == "user").group_by(ChatMessage.language).all()
     languages = {k if k else "fr": v for k, v in languages_db}
 
-    escalation_rate = round(total_escalades / total_messages, 2) if total_messages > 0 else 0.0
+    escalation_rate = round(total_escalades / total_messages, 4) if total_messages > 0 else 0.0
+    autonomous_resolution_rate = round(1.0 - escalation_rate, 4)
 
     return {
         "total_messages_recus": total_messages,
-        "escalation_rate": escalation_rate,
+        "escalation_rate": round(escalation_rate, 2),
+        "autonomous_resolution_rate": autonomous_resolution_rate,
         "top_intents": top_intents,
         "languages": languages,
         "tickets_created": tickets_created,
     }
+
 
 
 @router.get(
@@ -143,6 +146,22 @@ def get_conversation_detail(
             .limit(30)
             .all()
         )
+
+    # Pour un suivi de commande, ne conserver dans le récapitulatif que les messages à partir du moment où le suivi a été demandé
+    if target_msg.intent == "tracking":
+        start_idx = 0
+        for idx, msg in enumerate(thread_messages):
+            content_lower = (msg.content or "").lower()
+            if (
+                msg.intent == "tracking"
+                or "suivi" in content_lower
+                or "cmd" in content_lower
+                or "colis" in content_lower
+            ):
+                start_idx = idx
+                break
+        thread_messages = thread_messages[start_idx:]
+
 
     client_info = {
         "email": target_msg.user.email if target_msg.user else "inconnu",

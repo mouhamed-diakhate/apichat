@@ -74,7 +74,9 @@ function setLoginState() {
 
 function updateKPIs(data) {
   document.getElementById('kpi-messages').textContent = data.total_messages_recus;
-  document.getElementById('kpi-escalade').textContent = (data.escalation_rate * 100).toFixed(1) + '%';
+  var autoRes = data.autonomous_resolution_rate !== undefined ? data.autonomous_resolution_rate : (1.0 - (data.escalation_rate || 0));
+  document.getElementById('kpi-autonome').textContent = (autoRes * 100).toFixed(1) + '%';
+  document.getElementById('kpi-escalade').textContent = ((data.escalation_rate || 0) * 100).toFixed(1) + '%';
   document.getElementById('kpi-tickets').textContent = data.tickets_created;
 
   var entries = Object.entries(data.languages || {});
@@ -82,6 +84,7 @@ function updateKPIs(data) {
   document.getElementById('kpi-langue').textContent = top ? top[0].toUpperCase() : '—';
   document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR');
 }
+
 
 // ─── Graphiques ───────────────────────────────────────────────────────────────
 

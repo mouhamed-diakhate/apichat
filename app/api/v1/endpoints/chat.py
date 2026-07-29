@@ -163,36 +163,11 @@ def interactive_chat(
     response, session = process_interactive_step(
         session_id=payload.session_id,
         user_input=payload.message,
-        action_id=payload.action_id
+        action_id=payload.action_id,
+        db=db,
     )
 
     if response is not None:
-        # Enregistre les transactions terminées (cotation / opération) pour le dashboard.
-        if response.get("persist"):
-            try:
-                guest = db.query(User).filter(User.email == "invite@texmiles.sn").first()
-                if not guest:
-                    guest = User(email="invite@texmiles.sn", hashed_password="guest_no_login",
-                                 full_name="Visiteur Invité", is_active=True, is_superuser=False)
-                    db.add(guest)
-                    db.commit()
-                    db.refresh(guest)
-                lang = session.language or "fr"
-                db.add(ChatMessage(user_id=guest.id, role="user",
-                                   content=response.get("user_summary") or (payload.message or ""),
-                                   intent=response.get("intent"), language=lang,
-                                   session_id=payload.session_id))
-                db.add(ChatMessage(user_id=guest.id, role="assistant",
-                                   content=response.get("text", ""),
-                                   intent=response.get("intent"), language=lang,
-                                   ticket_id=response.get("reference"),
-                                   escalade=response.get("escalade", False),
-                                   raison_escalade=response.get("raison_escalade"),
-                                   session_id=payload.session_id))
-                db.commit()
-            except Exception as e:
-                db.rollback()
-                print(f"[interactive_chat persist] {e}")
         return response
 
     # Si session.state == AGENT_ACTIVE : appel au moteur d'intelligence IA
@@ -202,11 +177,20 @@ def interactive_chat(
     reply = ai_service.process_message(
         message=payload.message,
         history=history_list,
-        language=language
+        language=language,
+        session_id=payload.session_id,
     )
+
 
     session.history.append({"role": "user", "content": payload.message})
     session.history.append({"role": "assistant", "content": reply.texte})
+
+    # Sauvegarder l'historique mis à jour en BD
+    try:
+        from app.services.session_manager import _persist_session
+        _persist_session(session, db=db)
+    except Exception:
+        pass
 
     # Persistance en base de données pour alimenter le Dashboard
     try:
@@ -235,8 +219,7 @@ def interactive_chat(
             role="user",
             content=payload.message,
             intent=intent,
-            language=language,
-            session_id=payload.session_id
+            language=language
         )
         db.add(user_msg)
 
@@ -250,8 +233,7 @@ def interactive_chat(
             escalade=reply.escalade,
             raison_escalade=reply.raison_escalade,
             ticket_id=reply.ticket_id,
-            outils_utilises=outils_json,
-            session_id=payload.session_id
+            outils_utilises=outils_json
         )
         db.add(assistant_msg)
         db.commit()
@@ -267,4 +249,5 @@ def interactive_chat(
         "escalade": reply.escalade,
         "ticket_id": reply.ticket_id
     }
+
 
