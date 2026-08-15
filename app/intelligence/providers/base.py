@@ -34,6 +34,8 @@ class LLMResponse:
     """La réponse du modèle : soit du texte, soit une (des) demande(s) d'outil."""
     text: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
+    # Nom du provider/modèle qui a effectivement répondu (renseigné par FallbackProvider).
+    provider_used: str = ""
 
 
 class LLMProvider(ABC):
@@ -54,3 +56,12 @@ class LLMProvider(ABC):
         - tools : la liste des outils disponibles (schéma JSON style OpenAI), ou None.
         """
         raise NotImplementedError
+
+    def complete_text(self, system: str, user: str) -> str:
+        """
+        Appel simple sans outils — renvoie uniquement le texte du modèle.
+        Implémentation par défaut : appel chat() avec un message utilisateur unique.
+        Les providers peuvent surcharger cette méthode pour une implémentation optimisée.
+        """
+        resp = self.chat(system=system, messages=[{"role": "user", "content": user}])
+        return resp.text

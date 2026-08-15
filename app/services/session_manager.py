@@ -113,6 +113,16 @@ LANG_CHOICE_PAYLOAD = {
     ],
 }
 
+# Premier message WhatsApp : le CTA natif est « Démarrer » sur les fournisseurs
+# compatibles. Avec Evolution 2.3.x, le transport applique automatiquement un
+# menu texte numéroté afin de garantir la livraison.
+START_PAYLOAD = {
+    "text": (
+        "Bienvenue chez *TexMiles* 👋\n"
+        "Choisissez votre langue pour accéder à nos services."
+    ),
+}
+
 MODE_CHOICE_PAYLOAD_FR = {
     "text": "Comment souhaitez-vous échanger avec nous ?",
     "buttons": [
@@ -142,13 +152,14 @@ MODE_CHOICE_PAYLOAD_AR = {
     ],
 }
 
-# ─── Menu principal (3 services : Suivi, Opération, Cotation) ─────────────────
+# ─── Menu principal (4 services : Suivi, Opération, Cotation, FAQ) ────────────
 MENU_PAYLOAD_FR = {
     "text": "Menu principal TexMiles 📦\nQue souhaitez-vous faire ?",
     "buttons": [
         {"id": "service_tracking", "label": "📦 Suivi d'opération"},
         {"id": "service_operation", "label": "🚚 Demande d'opération"},
         {"id": "service_quotation", "label": "📋 Demande de cotation"},
+        {"id": "service_faq", "label": "❓ Questions fréquentes (FAQ)"},
     ],
 }
 MENU_PAYLOAD_WO = {
@@ -157,6 +168,7 @@ MENU_PAYLOAD_WO = {
         {"id": "service_tracking", "label": "📦 Topatu opération"},
         {"id": "service_operation", "label": "🚚 Laaj opération"},
         {"id": "service_quotation", "label": "📋 Laaj njég (cotation)"},
+        {"id": "service_faq", "label": "❓ Laaj yees tamal (FAQ)"},
     ],
 }
 MENU_PAYLOAD_EN = {
@@ -165,6 +177,7 @@ MENU_PAYLOAD_EN = {
         {"id": "service_tracking", "label": "📦 Track an operation"},
         {"id": "service_operation", "label": "🚚 Operation request"},
         {"id": "service_quotation", "label": "📋 Quotation request"},
+        {"id": "service_faq", "label": "❓ Frequently Asked Questions (FAQ)"},
     ],
 }
 MENU_PAYLOAD_AR = {
@@ -173,6 +186,7 @@ MENU_PAYLOAD_AR = {
         {"id": "service_tracking", "label": "📦 تتبع عملية"},
         {"id": "service_operation", "label": "🚚 طلب عملية"},
         {"id": "service_quotation", "label": "📋 طلب تسعير"},
+        {"id": "service_faq", "label": "❓ الأسئلة الشائعة (FAQ)"},
     ],
 }
 
@@ -372,6 +386,135 @@ def _resp(text, buttons, session, **extra):
     return r
 
 
+def _language_buttons() -> list[dict]:
+    """Construit les quatre lignes de la liste de langue WhatsApp."""
+    descriptions = {
+        "lang_fr": "Continuer en français",
+        "lang_wo": "Continuer en wolof",
+        "lang_en": "Continue in English",
+        "lang_ar": "المتابعة بالعربية",
+    }
+    return [
+        {**button, "description": descriptions.get(button["id"], "")}
+        for button in LANG_CHOICE_PAYLOAD["buttons"]
+    ]
+
+
+def _welcome_response(session: UserSession) -> dict:
+    """Retourne le CTA « Démarrer » ou son menu texte de secours."""
+    return _resp(
+        START_PAYLOAD["text"],
+        _language_buttons(),
+        session,
+        presentation="list",
+        menu_title="TexMiles",
+        menu_button_text="Démarrer",
+    )
+
+
+def _language_response(session: UserSession, text: str | None = None) -> dict:
+    """Retourne les quatre langues, sous forme native ou texte selon le fournisseur."""
+    return _resp(
+        text or LANG_CHOICE_PAYLOAD["text"],
+        _language_buttons(),
+        session,
+        presentation="list",
+        menu_title="Langue",
+        menu_button_text="Choisir ma langue",
+    )
+
+
+def _menu_response(session: UserSession, lang: Optional[str] = None) -> dict:
+    """Retourne les services dans une liste WhatsApp native."""
+    selected_lang = lang or session.language or "fr"
+    menu = _menu_for(selected_lang)
+    descriptions_by_lang = {
+        "fr": {
+            "service_tracking": "Suivre une commande ou un colis",
+            "service_operation": "Créer une demande d'expédition",
+            "service_quotation": "Obtenir une estimation de prix",
+            "service_faq": "Délais, tarifs, zones et informations",
+        },
+        "en": {
+            "service_tracking": "Track an order or parcel",
+            "service_operation": "Create a shipping request",
+            "service_quotation": "Get a price estimate",
+            "service_faq": "Rates, delivery times and information",
+        },
+        "wo": {
+            "service_tracking": "Topatu sa colis",
+            "service_operation": "Def ab demande d'opération",
+            "service_quotation": "Laaj estimation prix",
+            "service_faq": "Laaj ci délais, tarifs ak infos",
+        },
+        "ar": {
+            "service_tracking": "تتبع طلبك أو شحنتك",
+            "service_operation": "إنشاء طلب شحن",
+            "service_quotation": "الحصول على تقدير السعر",
+            "service_faq": "الأسعار والمواعيد والمعلومات",
+        },
+    }
+    descriptions = descriptions_by_lang.get(selected_lang, descriptions_by_lang["fr"])
+    # Les titres des lignes WhatsApp sont limités à 24 caractères. On conserve
+    # le libellé complet pour le web, mais on fournit une variante courte pour
+    # l'application WhatsApp, accompagnée de sa description explicative.
+    whatsapp_labels_by_lang = {
+        "fr": {
+            "service_tracking": "📦 Suivi commande",
+            "service_operation": "🚚 Nouvelle opération",
+            "service_quotation": "📋 Demander un devis",
+            "service_faq": "❓ FAQ",
+        },
+        "wo": {
+            "service_tracking": "📦 Topatu",
+            "service_operation": "🚚 Laaj opération",
+            "service_quotation": "📋 Laaj njég",
+            "service_faq": "❓ FAQ",
+        },
+        "en": {
+            "service_tracking": "📦 Track order",
+            "service_operation": "🚚 New operation",
+            "service_quotation": "📋 Get a quote",
+            "service_faq": "❓ FAQ / Help",
+        },
+        "ar": {
+            "service_tracking": "📦 تتبع الطلب",
+            "service_operation": "🚚 طلب جديد",
+            "service_quotation": "📋 طلب تسعير",
+            "service_faq": "❓ الأسئلة الشائعة",
+        },
+    }
+    whatsapp_labels = whatsapp_labels_by_lang.get(selected_lang, whatsapp_labels_by_lang["fr"])
+    buttons = [
+        {
+            **button,
+            "description": descriptions.get(button["id"], ""),
+            "whatsapp_label": whatsapp_labels.get(button["id"], button["label"]),
+        }
+        for button in menu["buttons"]
+    ]
+    menu_titles = {
+        "fr": "Services TexMiles",
+        "en": "TexMiles services",
+        "wo": "Services TexMiles",
+        "ar": "خدمات TexMiles",
+    }
+    menu_labels = {
+        "fr": "Voir les services",
+        "en": "View services",
+        "wo": "Gis services yi",
+        "ar": "عرض الخدمات",
+    }
+    return _resp(
+        menu["text"],
+        buttons,
+        session,
+        presentation="list",
+        menu_title=menu_titles.get(selected_lang, menu_titles["fr"]),
+        menu_button_text=menu_labels.get(selected_lang, menu_labels["fr"]),
+    )
+
+
 def process_interactive_step(
     session_id: str,
     user_input: str,
@@ -386,13 +529,36 @@ def process_interactive_step(
     if action_id == "goto_menu" or (session.language and text_clean in ["menu", "retour", "back"]):
         session.state = SessionState.AWAITING_MENU
         session.data = {}
-        menu = _menu_for(session.language)
-        return _resp(menu["text"], menu["buttons"], session), session
+        return _menu_response(session), session
+
+    # Le titre du bouton est aussi transmis par WhatsApp ("Démarrer").
+    # On traite donc d'abord son ID stable avant les mots-clefs de reset.
+    if action_id == "menu_start":
+        session.reset()
+        _persist_session(session, db=db)
+        return _language_response(session), session
 
     # RESET complet (revient au choix de langue)
-    if text_clean in ["reset", "start", "restart", "0"] or action_id == "menu_reset":
+    # Déclenché par : mots de reset techniques OU salutations courantes
+    # (un utilisateur qui dit "bonjour" après une longue absence doit être
+    # accueilli à nouveau, pas bloqué dans un ancien état de session).
+    _GLOBAL_RESET_TRIGGERS = {
+        "reset", "start", "restart", "0",
+        "bonjour", "bonsoir", "salut", "coucou",
+        "hello", "hi", "hey",
+        "démarrer", "demarrer", "commencer",
+        "nanga def", "nangadef",
+        "مرحبا", "مرحبا بكم", "السلام عليكم",
+    }
+    if action_id == "menu_reset":
         session.reset()
-        return _resp(LANG_CHOICE_PAYLOAD["text"], LANG_CHOICE_PAYLOAD["buttons"], session), session
+        _persist_session(session, db=db)
+        return _language_response(session), session
+
+    if text_clean in _GLOBAL_RESET_TRIGGERS:
+        session.reset()
+        _persist_session(session, db=db)
+        return _welcome_response(session), session
 
     # RÉCLAMATION exprimée librement (au menu ou en conversation) -> escalade humaine.
     # (Pas de bouton dédié : l'assistant la détecte, la prend en compte, et la transmet.)
@@ -412,9 +578,18 @@ def process_interactive_step(
         ), session
 
     # ── ÉTAPE 1 : Langue ──────────────────────────────────────────────────────
+    # Mots-clés de démarrage / salutations qui réaffichent le menu de langue
+    # (sans afficher le message d'erreur "langue invalide").
+    _GREETING_TRIGGERS = {
+        "bonjour", "bonsoir", "salut", "coucou", "hello", "hi", "hey",
+        "start", "démarrer", "demarrer", "commencer", "begin", "restart",
+        "nanga def", "nangadef", "salam", "السلام", "مرحبا", "مرحبا بكم",
+        "menu", "aide", "help",
+    }
+
     if session.state == SessionState.AWAITING_LANG:
         if not text_clean and not action_id:
-            return _resp(LANG_CHOICE_PAYLOAD["text"], LANG_CHOICE_PAYLOAD["buttons"], session), session
+            return _welcome_response(session), session
 
         lang = None
         if action_id == "lang_fr" or text_clean in ["1", "fr", "français", "francais"]:
@@ -427,9 +602,16 @@ def process_interactive_step(
             lang = "ar"
 
         if lang is None:
-            return _resp(
-                "Veuillez choisir une langue valide / الرجاء اختيار لغة صحيحة:\n\n" + LANG_CHOICE_PAYLOAD["text"],
-                LANG_CHOICE_PAYLOAD["buttons"], session), session
+            # Si c'est une salutation / mot de démarrage → réafficher le menu
+            # de langue proprement, sans message d'erreur.
+            if text_clean in _GREETING_TRIGGERS or not text_clean:
+                return _welcome_response(session), session
+            # Sinon : réponse non reconnue → rappeler les choix valides
+            return _language_response(
+                session,
+                "Veuillez choisir une langue valide / الرجاء اختيار لغة صحيحة:\n\n"
+                + LANG_CHOICE_PAYLOAD["text"],
+            ), session
 
         session.language = lang
         session.state = SessionState.AWAITING_MODE
@@ -444,8 +626,7 @@ def process_interactive_step(
         if action_id == "mode_write" or text_clean in ["1", "écrire", "ecrire", "write", "bind", "message", "chat", "كتابة"]:
             session.selected_mode = "write"
             session.state = SessionState.AWAITING_MENU
-            menu = _menu_for(lang)
-            return _resp(menu["text"], menu["buttons"], session), session
+            return _menu_response(session, lang), session
 
         if action_id == "mode_call" or text_clean in ["2", "appel", "appeler", "téléphone", "telephone", "phone", "call", "réceptionniste", "receptionniste", "اتصال"]:
             session.selected_mode = "call"
@@ -491,6 +672,17 @@ def process_interactive_step(
             session.data = {"flow": "cotation"}
             session.state = SessionState.COLLECT_ORIGIN
             return _resp(FLOW_TXT[lang]["ask_origin"], [_back_button(lang)], session), session
+
+        # 4) Questions fréquentes (FAQ) -> agent IA (recherche FAQ)
+        if action_id == "service_faq" or text_clean in ["4", "faq", "question", "questions", "info", "laaj", "الأسئلة"]:
+            session.selected_service = "faq"
+            session.state = SessionState.AGENT_ACTIVE
+            session.history = []
+            ask = {"fr": "❓ *Questions fréquentes (FAQ)*\nPosez votre question (ex : tarifs, délais, horaires, zones de livraison, retours...).",
+                   "en": "❓ *Frequently Asked Questions (FAQ)*\nAsk your question (e.g. rates, delivery delays, operating hours, delivery zones, returns...).",
+                   "wo": "❓ *Laaj yees tamal (FAQ)*\nLaajal sa laaj (ex: njég, délais, waxtu, zones, retours...).",
+                   "ar": "❓ *الأسئلة الشائعة (FAQ)*\nطرح سؤالك (مثال: الأسعار، المواعيد، ساعات العمل، مناطق التسليم، الإرجاع...)."}[lang]
+            return _resp(ask, [_back_button(lang)], session, service="faq"), session
 
         # Sinon : question libre -> agent IA
         session.selected_service = "general"

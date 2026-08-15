@@ -47,6 +47,26 @@ py cli.py                        # OU chat en ligne de commande
 ## Tests en un coup d'œil
 
 ```powershell
-py -m pytest tests/ -q     # 10 tests (API/auth/chat), SANS clé API
+py -m pytest tests/ -q     # tests API, IA et RAG, SANS clé API
 py -m eval.run_eval        # 12 scénarios de recette, AVEC clé API
 ```
+
+## Base de connaissances RAG
+
+Déposez les documents internes dans `data/knowledge/` (PDF, DOCX, Markdown,
+TXT ou HTML). Le PDF des CGV existant à la racine de `data/` est aussi indexé.
+Au démarrage, le projet découpe les documents en passages traçables et conserve
+leur document, page et article/section. Les réponses qui utilisent un passage
+affichent ensuite une section `Sources vérifiées`, par exemple :
+
+```text
+Sources vérifiées :
+- [S1] Conditions générales de vente — Article 11 — p. 6
+```
+
+Les manifests et embeddings générés sont conservés dans `data/.rag/` et ne sont
+pas versionnés. Par défaut, l’application n’effectue aucun téléchargement réseau
+au démarrage ; elle utilise le modèle d’embeddings déjà disponible localement ou
+le fallback TF-IDF. Pour autoriser un téléchargement contrôlé du modèle lors de
+la première indexation, définissez `RAG_ALLOW_REMOTE_MODEL_DOWNLOAD=True` dans
+`.env`.

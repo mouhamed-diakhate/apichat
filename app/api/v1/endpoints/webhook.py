@@ -12,7 +12,7 @@ from app.services.session_manager import process_interactive_step
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-META_VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN", "texmiles_secret_verify_token")
+META_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "texmiles_2026")
 
 
 @router.get("/webhook", summary="Vérification du Webhook par Meta Cloud API")

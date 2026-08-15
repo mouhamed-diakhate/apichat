@@ -118,34 +118,59 @@ Tapez un message, lisez la réponse ; `quitter` pour sortir. Exemples à essayer
 - `j'ai reçu un colis endommagé, commande CMD1004`
 - `je veux parler à un humain`
 
-### 5.2 API web + Swagger (parcours complet, idéal soutenance)
+### 5.3 WhatsApp via Evolution API (Test pas à pas autonome)
 
-1. Lancer le serveur :
-   ```powershell
-   uvicorn app.main:app --reload
-   ```
-2. Ouvrir **http://127.0.0.1:8000/docs** (Swagger UI).
-3. **Créer un compte** : `POST /api/v1/auth/register`
-   ```json
-   { "email": "demo@texmiles.com", "password": "motdepasse123", "full_name": "Demo" }
-   ```
-4. **Se connecter** : `POST /api/v1/auth/login` (mêmes email/mot de passe) → copiez le
-   `access_token` renvoyé.
-5. Cliquer sur **« Authorize »** (en haut à droite de Swagger) et coller le token.
-6. **Tester le chat** : `POST /api/v1/chat/message`
-   - **FAQ** : `{ "content": "Quels sont vos délais de livraison ?" }`
-     → utilise l'outil `search_faq`.
-   - **Suivi** : `{ "content": "Où en est ma commande CMD1002 ?" }`
-     → utilise `lookup_order`, renvoie le statut.
-   - **Réclamation** : `{ "content": "Ma commande CMD1004 est arrivée endommagée" }`
-     → ouvre un ticket, `escalade = true`.
-   - **Escalade** : `{ "content": "C'est inadmissible, je veux un humain !" }`
-     → `escalade = true` avec la raison.
-   - **Identité** : `{ "content": "Statut de CMD1002, mon numéro est +221 76 000 00 00" }`
-     → refuse de divulguer (incohérence) et reste prudent.
-7. **Historique** : `GET /api/v1/chat/history` → tous les messages échangés.
-8. **Statistiques** : `GET /api/v1/dashboard/stats` → nombre de messages, taux d'escalade,
-   répartition par intention, tickets créés.
+Pour tester la réception et l'envoi automatique de messages sur **WhatsApp** depuis votre propre téléphone, suivez ces étapes simples :
+
+#### 📌 Étape 1 : Démarrer les services Docker (Evolution API)
+Assurez-vous que Docker Desktop est ouvert, puis lancez les conteneurs :
+```powershell
+docker start evolution_api evolution_postgres evolution_redis
+```
+*(Ou `docker compose up -d` si vous utilisez docker-compose).*
+
+#### 📌 Étape 2 : Lancer le serveur backend FastAPI
+Dans votre terminal PowerShell :
+```powershell
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+L'API tourne sur `http://localhost:8000`.
+
+#### 📌 Étape 3 : Créer le tunnel public HTTPS pour le Webhook
+Ouvrez une **deuxième fenêtre PowerShell** à la racine du projet et lancez `cloudflared` :
+```powershell
+.\cloudflared.exe tunnel --url http://localhost:8000
+```
+Dans les logs, repérez la ligne :
+`https://<votre-sous-domaine>.trycloudflare.com`
+
+#### 📌 Étape 4 : Configurer le Webhook dans Evolution API
+Ouvrez une **troisième fenêtre PowerShell** et exécutez la commande suivante (en remplaçant l'URL par la vôtre) :
+```powershell
+$tunnelUrl = "https://<votre-sous-domaine>.trycloudflare.com/api/v1/evolution/webhook"
+$body = @{
+  url = $tunnelUrl
+  webhook = @{
+    enabled = $true
+    url = $tunnelUrl
+    webhookByEvents = $false
+    webhookBase64 = $false
+    events = @("MESSAGES_UPSERT")
+  }
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Uri "http://localhost:8080/webhook/set/TexMiles" -Headers @{"apikey"="123456789"; "Content-Type"="application/json"} -Method POST -Body $body
+```
+
+#### 📌 Étape 5 : Connecter WhatsApp (Scanner le QR Code)
+- Si l'instance est déjà connectée, vous n'avez rien à faire !
+- Pour vérifier ou scanner le QR Code, ouvrez votre navigateur sur :
+  👉 **http://localhost:8000/qr**
+- Sur WhatsApp (sur votre téléphone) → **Appareils connectés** → **Connecter un appareil** → Scannez le QR Code affiché à l'écran.
+
+#### 📌 Étape 6 : Tester sur WhatsApp !
+- Depuis n'importe quel numéro de téléphone, envoyez un message au numéro WhatsApp connecté.
+- Vous recevrez immédiatement les menus interactifs (Langue → Mode → Menu principal → Agent IA).
 
 ---
 
@@ -168,6 +193,7 @@ Ces commandes viennent de `data/orders.mock.json` :
 
 | Symptôme | Cause | Solution |
 |----------|-------|----------|
+| `ECONNREFUSED` sur le webhook Evolution API | Webhook configuré sur `localhost:8000` au lieu du tunnel Cloudflare | Mettez à jour le Webhook avec l'URL HTTPS `trycloudflare.com` (Étape 4) |
 | `429 ... tokens per day` | Quota gratuit Groq épuisé pour ce modèle | Changez `MODEL` dans `.env` (chaque modèle a son propre quota), ou attendez la réinitialisation quotidienne |
 | `Clé API manquante pour '...'` | `.env` mal renseigné | Vérifiez `AI_PROVIDER` et la clé correspondante |
 | Erreur d'insertion en base après modification d'un modèle | La base SQLite existante n'a pas les nouvelles colonnes | Supprimez le fichier `assistant_ia.db` : il sera recréé au démarrage |
@@ -182,6 +208,8 @@ Ces commandes viennent de `data/orders.mock.json` :
 - ✅ Tous les modules compilent et l'application démarre.
 - ✅ **10/10 tests unitaires** passent (API, auth, chat, persistance — sans clé API).
 - ✅ Le moteur IA passe **12/12 scénarios** de recette (avec une clé, modèle fiable).
-- ✅ Les routes `/api/v1/auth`, `/api/v1/chat`, `/api/v1/dashboard` sont exposées.
+- ✅ Les routes `/api/v1/auth`, `/api/v1/chat`, `/api/v1/dashboard`, `/api/v1/evolution` sont exposées.
+- ✅ L'intégration complète **Evolution API WhatsApp** est opérationnelle avec tunnel Cloudflare.
 
 *Bonne démonstration !*
+

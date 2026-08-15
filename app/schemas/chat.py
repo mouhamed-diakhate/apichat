@@ -8,6 +8,11 @@ from pydantic import BaseModel, Field
 class ChatMessageCreate(BaseModel):
     """Données pour envoyer un nouveau message dans le chat."""
     content: str = Field(..., min_length=1, description="Contenu textuel du message")
+    session_id: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Identifiant de conversation a reutiliser pour poursuivre le meme fil",
+    )
 
     model_config = {"str_strip_whitespace": True}
 
@@ -24,6 +29,8 @@ class ChatMessageResponse(BaseModel):
     raison_escalade: str | None = None
     ticket_id: str | None = None
     outils_utilises: str | None = None
+    # Provenance RAG structurée : document, page, section et citation affichée.
+    sources: list[dict] = Field(default_factory=list)
     session_id: str | None = None
     created_at: datetime
 

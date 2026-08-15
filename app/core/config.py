@@ -41,10 +41,25 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "qwen2.5"
     MODEL: str = ""  # Laissez vide pour utiliser le modèle par défaut du provider
 
-    # WhatsApp Cloud API (Étape Meta)
+    # Base de connaissances RAG. Par défaut, l'API ne télécharge pas de modèle
+    # d'embeddings au démarrage : elle utilise le cache local ou le fallback TF-IDF.
+    RAG_ALLOW_REMOTE_MODEL_DOWNLOAD: bool = False
+
+    # WhatsApp Cloud API (Étape Meta) & Evolution API
+    WHATSAPP_PROVIDER: str = "meta"  # "meta" ou "evolution"
     WHATSAPP_API_TOKEN: str = ""
     WHATSAPP_PHONE_NUMBER_ID: str = ""
     WHATSAPP_VERIFY_TOKEN: str = "texmiles_2026"
+
+    # Evolution API (Alternative sans validation Meta Business)
+    EVOLUTION_API_URL: str = "http://localhost:8080"
+    EVOLUTION_API_KEY: str = ""
+    EVOLUTION_INSTANCE_NAME: str = "TexMiles"
+    # Evolution/Baileys 2.3.x peut accuser reception d'un message interactif
+    # sans qu'il soit affichable dans WhatsApp. On le desactive tant qu'une
+    # version validee en production n'est pas en place; le menu texte reste
+    # pleinement utilisable dans cet intervalle.
+    EVOLUTION_INTERACTIVE_ENABLED: bool = False
 
 
     model_config = SettingsConfigDict(

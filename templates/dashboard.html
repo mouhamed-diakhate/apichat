@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TexMiles Assistant — Tableau de bord</title>
   <link rel="icon" type="image/png" href="/static/texmiles-logo.png">
-  <link rel="stylesheet" href="/static/dashboard.css?v=10">
+  <link rel="stylesheet" href="/static/dashboard.css?v=19">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -18,8 +18,31 @@
           <p>Tableau de bord service client · <span class="badge">Démo</span> · Dernière màj : <span id="last-update">—</span></p>
         </div>
       </div>
+      <div id="notification-center" class="notification-center">
+        <button
+          id="notification-bell"
+          class="notification-bell"
+          type="button"
+          aria-label="Notifications d'escalade"
+          aria-controls="notification-panel"
+          aria-expanded="false"
+          title="Notifications d'escalade"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span id="notification-badge" class="notification-badge" hidden>0</span>
+        </button>
+        <section id="notification-panel" class="notification-panel" aria-label="Escalades non lues">
+          <div class="notification-panel-header">
+            <strong>Escalades à traiter</strong>
+            <span id="notification-panel-count"></span>
+          </div>
+          <div id="notification-list" class="notification-list"></div>
+        </section>
+      </div>
     </div>
   </header>
+
+  <div id="notification-toasts" class="notification-toasts" aria-live="polite" aria-atomic="false"></div>
 
   <section id="login-panel" class="login-panel">
     <div class="login-header">
@@ -30,8 +53,8 @@
       </div>
     </div>
     <form id="login-form">
-      <input id="login-email" type="email" placeholder="Email" value="admin@texmiles.sn" required>
-      <input id="login-password" type="password" placeholder="Mot de passe" value="Admin1234!" required>
+      <input id="login-email" type="email" placeholder="Email" autocomplete="username" required>
+      <input id="login-password" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
       <button type="submit">Se connecter</button>
       <p class="error" id="login-error"></p>
     </form>
@@ -42,10 +65,45 @@
       <section class="toolbar">
         <button id="logout-btn" class="logout-button">Déconnexion</button>
       </section>
+
+      <section class="metrics-filter" aria-labelledby="metrics-filter-title">
+        <div class="metrics-filter-copy">
+          <h2 id="metrics-filter-title">Indicateurs de performance</h2>
+          <p id="metrics-period-status" aria-live="polite">Période : toutes les données disponibles</p>
+        </div>
+        <form id="metrics-period-form" class="metrics-period-form" novalidate>
+          <div class="metrics-date-field">
+            <label for="metrics-start-date">Du</label>
+            <input id="metrics-start-date" type="date" name="start_date">
+          </div>
+          <div class="metrics-date-field">
+            <label for="metrics-end-date">Au</label>
+            <input id="metrics-end-date" type="date" name="end_date">
+          </div>
+          <div class="metrics-period-actions">
+            <button id="metrics-period-apply" class="metrics-apply-button" type="submit">Appliquer</button>
+            <button id="metrics-period-reset" class="metrics-reset-button" type="button">Tout l'historique</button>
+            <button
+              id="dashboard-export-csv"
+              class="metrics-export-button"
+              type="button"
+              title="Télécharger les tickets et escalades de la période sélectionnée"
+            >
+              Exporter CSV
+            </button>
+          </div>
+        </form>
+        <p id="metrics-period-feedback" class="metrics-period-feedback" role="alert" hidden></p>
+      </section>
+
       <section class="kpi-grid">
         <article class="kpi-card">
           <h3>Messages reçus</h3>
           <span class="kpi-value" id="kpi-messages">—</span>
+        </article>
+        <article class="kpi-card">
+          <h3>Conversations distinctes</h3>
+          <span class="kpi-value" id="kpi-conversations">—</span>
         </article>
         <article class="kpi-card">
           <h3>Résolution autonome</h3>
@@ -58,6 +116,10 @@
         <article class="kpi-card">
           <h3>Tickets créés</h3>
           <span class="kpi-value" id="kpi-tickets">—</span>
+        </article>
+        <article class="kpi-card">
+          <h3>Délai moyen de prise en charge humaine</h3>
+          <span class="kpi-value kpi-value-compact" id="kpi-human-response">—</span>
         </article>
         <article class="kpi-card">
           <h3>Langue dominante</h3>
@@ -77,7 +139,86 @@
         </article>
       </section>
 
+      <section class="intent-resolution-section" aria-labelledby="intent-resolution-title">
+        <div class="intent-resolution-header">
+          <div>
+            <h2 id="intent-resolution-title">Taux de résolution par intention</h2>
+            <p>Part des conversations résolues, par l'IA ou après traitement humain, pour chaque service détecté.</p>
+          </div>
+        </div>
+        <div id="intent-resolution-list" class="intent-resolution-list" role="list" aria-live="polite">
+          <p class="intent-resolution-empty">Chargement des taux de résolution…</p>
+        </div>
+      </section>
+
+      <section class="faq-management" aria-labelledby="faq-manager-title">
+        <div class="faq-management-header">
+          <div>
+            <h2 id="faq-manager-title">Base de connaissances FAQ</h2>
+            <p>Créez et mettez à jour les réponses utilisées par l'assistant, sans modifier de fichier JSON.</p>
+          </div>
+          <button id="faq-new-btn" class="faq-primary-button" type="button">
+            <span aria-hidden="true">+</span> Ajouter une FAQ
+          </button>
+        </div>
+
+        <div id="faq-feedback" class="faq-feedback" role="status" aria-live="polite" hidden></div>
+
+        <div class="faq-manager-layout">
+          <section class="faq-list-panel" aria-labelledby="faq-list-title">
+            <div class="faq-list-heading">
+              <h3 id="faq-list-title">Questions enregistrées</h3>
+              <button id="faq-reload-btn" class="faq-icon-button" type="button" aria-label="Actualiser la liste des FAQ" title="Actualiser la liste">
+                &#x21bb;
+              </button>
+            </div>
+
+            <label class="faq-search-label" for="faq-search">Rechercher une question ou un mot-clé</label>
+            <input
+              id="faq-search"
+              class="faq-search-input"
+              type="search"
+              placeholder="Ex. livraison, horaires, paiement"
+              autocomplete="off"
+              aria-describedby="faq-search-help"
+            >
+            <p id="faq-search-help" class="faq-help">La recherche porte sur les questions, réponses et mots-clés.</p>
+
+            <p id="faq-list-status" class="faq-list-status" role="status" aria-live="polite">Chargement des FAQ…</p>
+            <ul id="faq-list" class="faq-list" aria-label="Liste des FAQ"></ul>
+          </section>
+
+          <section class="faq-editor-panel" aria-labelledby="faq-form-title">
+            <div class="faq-editor-heading">
+              <h3 id="faq-form-title">Ajouter une FAQ</h3>
+              <p id="faq-form-description">Les champs marqués d'un astérisque sont obligatoires.</p>
+            </div>
+
+            <form id="faq-form" class="faq-form" aria-describedby="faq-form-description">
+              <input id="faq-entry-id" type="hidden">
+
+              <label for="faq-question">Question <span aria-hidden="true">*</span></label>
+              <input id="faq-question" name="question" type="text" maxlength="500" required autocomplete="off" placeholder="Ex. Quels sont vos délais de livraison ?">
+
+              <label for="faq-answer">Réponse <span aria-hidden="true">*</span></label>
+              <textarea id="faq-answer" name="answer" rows="7" maxlength="5000" required placeholder="Rédigez la réponse que l'assistant pourra utiliser."></textarea>
+
+              <label for="faq-keywords">Mots-clés</label>
+              <input id="faq-keywords" name="keywords" type="text" maxlength="1000" autocomplete="off" placeholder="livraison, délai, réception">
+              <p class="faq-help">Séparez les mots-clés par des virgules.</p>
+
+              <div class="faq-form-actions">
+                <button id="faq-save-btn" class="faq-primary-button" type="submit">Enregistrer la FAQ</button>
+                <button id="faq-cancel-btn" class="faq-secondary-button" type="button" hidden>Annuler la modification</button>
+                <button id="faq-delete-btn" class="faq-delete-button" type="button" disabled aria-disabled="true">Supprimer</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
       <section class="filters">
+        <input type="text" id="filter-phone" placeholder="🔍 Recherche N° Téléphone..." style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #1e293b; color: #fff; font-size: 13px; outline: none; width: 230px;">
         <select id="filter-intent">
           <option value="">Toutes intentions</option>
           <option value="tracking">Suivi</option>
@@ -88,10 +229,12 @@
           <option value="human">Escalade humaine</option>
           <option value="general">Général</option>
         </select>
-        <select id="filter-escalade">
+        <select id="filter-status">
           <option value="">Tous statuts</option>
-          <option value="false">Résolu</option>
-          <option value="true">Escaladé</option>
+          <option value="en_attente">Nouveaux - en attente</option>
+          <option value="repondu">Répondu par l'IA</option>
+          <option value="escalade">Escaladé</option>
+          <option value="traite">Traité par l'équipe</option>
         </select>
         <button id="btn-refresh" title="Rafraîchir">&#x21bb;</button>
       </section>
@@ -101,12 +244,12 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Client</th>
+              <th>Client / N° Téléphone</th>
               <th>Intention / Service</th>
               <th>Langue</th>
               <th>Statut</th>
               <th>Référence</th>
-              <th>Dernier message</th>
+              <th>Dernier message client</th>
             </tr>
           </thead>
           <tbody id="conv-body"></tbody>
@@ -143,7 +286,7 @@
       </div>
       <div class="meta-item">
         <small>Statut Traitement</small>
-        <strong id="drawer-status">—</strong>
+        <strong id="drawer-status" aria-live="polite">—</strong>
       </div>
       <div class="meta-item">
         <small>Réf / Ticket</small>
@@ -157,13 +300,13 @@
     </div>
 
     <div class="drawer-actions">
-      <button id="btn-resolve-claim" class="action-btn resolve">
+      <button id="btn-resolve-claim" class="action-btn resolve" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-        Marquer comme traité
+        <span id="btn-resolve-label">Marquer comme traité</span>
       </button>
-      <button id="btn-contact-client" class="action-btn whatsapp">
+      <button id="btn-contact-client" class="action-btn whatsapp" disabled aria-disabled="true" title="Numéro WhatsApp indisponible pour ce client">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
-        Contacter sur WhatsApp
+        <span id="btn-contact-client-label">Contacter sur WhatsApp</span>
       </button>
     </div>
   </aside>
@@ -193,7 +336,7 @@
     </div>
   </aside>
 
-  <script src="/static/dashboard.js?v=8"></script>
+  <script src="/static/dashboard.js?v=19"></script>
 
 
 </body>

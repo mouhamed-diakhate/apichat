@@ -48,6 +48,7 @@ class User(Base):
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
         "ChatMessage",
         back_populates="user",
+        foreign_keys="ChatMessage.user_id",
         cascade="all, delete-orphan",
     )
 

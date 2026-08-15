@@ -307,7 +307,7 @@
 
         function sendActionButton(actionId, label) {
             appendMessage("user", label);
-            sendInteractivePayload("", actionId);
+            sendInteractivePayload(label, actionId);
         }
 
         function resetChat() {
@@ -315,24 +315,45 @@
             sendInteractivePayload("reset", null);
         }
 
-        function appendMessage(role, text, buttons = []) {
+        function createActionButton(container, btn) {
+            const button = document.createElement("button");
+            button.className = "action-button";
+            button.type = "button";
+            button.textContent = btn.label;
+            button.addEventListener("click", function() {
+                Array.from(container.querySelectorAll("button")).forEach(item => item.disabled = true);
+                sendActionButton(btn.id, btn.label);
+            });
+            container.appendChild(button);
+        }
+
+        function appendMessage(role, text, buttons = [], presentation = "buttons", menuButtonText = "") {
             const messageDiv = document.createElement("div");
             messageDiv.className = `message ${role}`;
 
             // Embellir le markdown gras
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-            let html = `<div class="bubble">${formattedText}</div>`;
+            messageDiv.innerHTML = `<div class="bubble">${formattedText}</div>`;
 
             if (buttons && buttons.length > 0) {
-                html += `<div class="buttons-container">`;
-                buttons.forEach(btn => {
-                    html += `<button class="action-button" onclick="sendActionButton('${btn.id}', '${btn.label}')">${btn.label}</button>`;
-                });
-                html += `</div>`;
+                const container = document.createElement("div");
+                container.className = "buttons-container";
+                if (presentation === "list") {
+                    const menuButton = document.createElement("button");
+                    menuButton.className = "action-button";
+                    menuButton.type = "button";
+                    menuButton.textContent = menuButtonText || "Voir les options";
+                    menuButton.addEventListener("click", function() {
+                        menuButton.remove();
+                        buttons.forEach(btn => createActionButton(container, btn));
+                    });
+                    container.appendChild(menuButton);
+                } else {
+                    buttons.forEach(btn => createActionButton(container, btn));
+                }
+                messageDiv.appendChild(container);
             }
-
-            messageDiv.innerHTML = html;
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
@@ -375,7 +396,13 @@
                 }
 
                 const data = await response.json();
-                appendMessage("assistant", data.text, data.buttons);
+                appendMessage(
+                    "assistant",
+                    data.text,
+                    data.buttons,
+                    data.presentation,
+                    data.menu_button_text
+                );
             } catch (err) {
                 removeTyping();
                 appendMessage("assistant", "⚠️ Impossible de contacter l'assistant.");

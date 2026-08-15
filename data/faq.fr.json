@@ -1,5 +1,5 @@
 {
-  "_commentaire": "Base de connaissances FAQ (français). Ce fichier est modifiable SANS toucher au code : ajoutez/éditez des entrées, l'assistant les utilisera au prochain démarrage. Chaque entrée a des 'mots_cles' qui aident à retrouver la bonne réponse.",
+  "_commentaire": "Base de connaissances FAQ et Conditions Générales de Vente (CGV Logidoo / 2W Logistics).",
   "entrees": [
     {
       "id": "horaires",
@@ -36,6 +36,103 @@
       "question": "Quels moyens de paiement acceptez-vous ?",
       "mots_cles": ["paiement", "payer", "payement", "carte", "wave", "orange money", "espèces", "cash"],
       "reponse": "Nous acceptons le paiement à la livraison (espèces), Orange Money, Wave et la carte bancaire."
+    },
+    {
+      "id": "cgv_art_1",
+      "question": "Quel est l'objet et le domaine d'application des CGV 2W Logistics / Logidoo ? (Article 1)",
+      "mots_cles": ["cgv", "domaine", "application", "objet", "contrat", "logidoo", "2wl", "marchandise", "transport", "stock"],
+      "reponse": "Selon l'Article 1 des CGV : Les présentes conditions générales régissent les relations contractuelles entre un donneur d'ordre et 2W Logistics (2WL) / Logidoo pour tout déplacement physique de marchandise (tout mode de transport), la gestion physique ou juridique de stocks et les flux d'informations associés."
+    },
+    {
+      "id": "cgv_art_2_1",
+      "question": "Comment sont calculés les prix et cotations des prestations ? (Article 2.1)",
+      "mots_cles": ["prix", "tarif", "calcul", "cotation", "poids", "volume", "devises", "taux", "marchandise", "devis"],
+      "reponse": "Selon l'Article 2.1 des CGV : Les prix sont calculés sur la base des informations fournies par le donneur d'ordre (prestations, nature, poids, volume de marchandise, itinéraire). Les cotations dépendent des taux de devises au moment de l'offre et des règlements internationaux."
+    },
+    {
+      "id": "cgv_art_2_2",
+      "question": "Les prix comprennent-ils les taxes et frais de douane ? (Article 2.2)",
+      "mots_cles": ["taxe", "douane", "impôt", "droit", "redevance", "frais douaniers", "provenance", "destination"],
+      "reponse": "Selon l'Article 2.2 des CGV : Les prix ne comprennent pas les droits, taxes, redevances et impôts dus en application des réglementations fiscales ou douanières des pays de provenance ou de destination."
+    },
+    {
+      "id": "cgv_art_3",
+      "question": "Comment fonctionne l'assurance des marchandises ? Est-elle automatique ? (Article 3)",
+      "mots_cles": ["assurance", "assurer", "couverture", "risque", "guerre", "grève", "sinistre", "valeur", "police"],
+      "reponse": "Selon l'Article 3 des CGV : Aucune assurance n'est souscrite automatiquement par 2WL / Logidoo sans ordre écrit et répété du donneur d'ordre pour chaque expédition. Si demandé, 2WL agit comme mandataire pour souscrire une assurance. À défaut de précision, seuls les risques classiques (hors guerre et grève) sont couverts aux frais du client."
+    },
+    {
+      "id": "cgv_art_4",
+      "question": "Les délais de livraison sont-ils garantis et comment sont données les instructions ? (Article 4)",
+      "mots_cles": ["exécution", "départ", "arrivée", "délais", "indicatif", "instructions", "documents", "remboursement", "cod"],
+      "reponse": "Selon l'Article 4 des CGV : Les dates de départ et d'arrivée sont données à titre purement indicatif. Le client doit fournir en temps utile des instructions précises. Les demandes spécifiques (livraison contre remboursement, déclaration de valeur, assurance) doivent faire l'objet d'un ordre écrit et répété."
+    },
+    {
+      "id": "cgv_art_5_1_2",
+      "question": "Quelles sont les obligations d'emballage, d'étiquetage et qui est responsable des défectuosités ? (Article 5.1 & 5.2)",
+      "mots_cles": ["emballage", "étiquetage", "conditionnement", "colis", "marquage", "sécurité", "défaut", "casse"],
+      "reponse": "Selon les Articles 5.1 & 5.2 des CGV : La marchandise doit être emballée et étiquetée de façon à supporter le transport et la manutention. Le donneur d'ordre est seul responsable du choix du conditionnement et répond de toutes les conséquences d'une défectuosité ou insuffisance d'emballage."
+    },
+    {
+      "id": "cgv_art_5_4",
+      "question": "Quelles marchandises sont prohibées ou interdites au transport ? (Article 5.4)",
+      "mots_cles": ["interdit", "prohibé", "illicite", "contrefaçon", "stupéfiants", "déclaration", "danger"],
+      "reponse": "Selon l'Article 5.4 des CGV : Il est strictement interdit de remettre des marchandises illicites ou prohibées (produits de contrefaçon, stupéfiants, etc.). Le donneur d'ordre supporte seul les conséquences des déclarations erronées ou incomplètes."
+    },
+    {
+      "id": "cgv_art_5_5",
+      "question": "Que doit faire le destinataire en cas de perte, avarie ou retard à la réception ? (Article 5.5)",
+      "mots_cles": ["réserves", "avarie", "perte", "dommage", "constat", "réception", "délais légaux"],
+      "reponse": "Selon l'Article 5.5 des CGV : En cas de perte, d'avarie ou de retard, le destinataire doit procéder aux constatations régulières, émettre des réserves motivées et les confirmer dans les formes et délais légaux. À défaut, aucune action ne pourra être exercée contre 2WL / Logidoo."
+    },
+    {
+      "id": "cgv_art_5_6",
+      "question": "Que se passe-t-il si le destinataire refuse la marchandise ? (Article 5.6)",
+      "mots_cles": ["refus", "défaillance", "destinataire", "frais", "retour", "charge"],
+      "reponse": "Selon l'Article 5.6 des CGV : En cas de refus de réception ou de défaillance du destinataire, tous les frais initiaux et supplémentaires engagés restent à la charge du donneur d'ordre."
+    },
+    {
+      "id": "cgv_art_6_2",
+      "question": "Quel est le plafond d'indemnisation / remboursement en cas de perte ou d'avarie de marchandise ? (Article 6.2)",
+      "mots_cles": ["indemnisation", "plafond", "remboursement", "perte", "avarie", "casse", "20 euros", "kilo", "poids brut"],
+      "reponse": "Selon l'Article 6.2 des CGV : En cas de responsabilité de 2WL / Logidoo pour perte ou avarie, l'indemnisation est strictement limitée à 20 € par kilogramme de poids brut de marchandises manquantes ou avariées (sans pouvoir excéder la valeur déclarée)."
+    },
+    {
+      "id": "cgv_art_6_3",
+      "question": "Quel est le plafond de réparation en cas de retard de livraison ? (Article 6.3)",
+      "mots_cles": ["retard", "dommage", "réparation", "indemnité retard", "prix transport"],
+      "reponse": "Selon l'Article 6.3 des CGV : En cas de retard de livraison dûment constaté, la réparation due par 2WL / Logidoo est strictement limitée au prix du transport de la marchandise (hors droits et taxes)."
+    },
+    {
+      "id": "cgv_art_6_5",
+      "question": "Comment augmenter la limite de remboursement avec la Déclaration de valeur ? (Article 6.5)",
+      "mots_cles": ["déclaration de valeur", "assurance", "dépasser plafond", "supplément prix", "renouvellement"],
+      "reponse": "Selon l'Article 6.5 des CGV : Le donneur d'ordre peut souscrire une Déclaration de Valeur qui substitue son montant aux plafonds légaux d'indemnisation (20 €/kg) moyennant un supplément de prix. Cette instruction doit être renouvelée pour chaque opération."
+    },
+    {
+      "id": "cgv_art_7",
+      "question": "Quelles sont les conditions et délais de paiement des factures ? (Article 7)",
+      "mots_cles": ["paiement", "facture", "comptant", "délais de paiement", "30 jours", "escompte", "compensation"],
+      "reponse": "Selon l'Article 7 des CGV : 7.1- Les prestations sont payables comptant à réception de facture, sans escompte, dans un délai maximum de 30 jours à compter de la date d'émission. 7.2- La compensation unilatérale des dommages allégués sur le prix des prestations est interdite."
+    },
+    {
+      "id": "cgv_art_8",
+      "question": "Qu'est-ce que le droit de rétention et de gage en cas d'impayé ? (Article 8)",
+      "mots_cles": ["rétention", "gage", "saisie", "garantie", "créances", "impayé", "retenir"],
+      "reponse": "Selon l'Article 8 des CGV : 2WL / Logidoo dispose d'un droit de rétention conventionnel et d'un droit de gage sur les marchandises et documents en sa possession pour garantir le paiement de la totalité des créances et factures impayées du donneur d'ordre."
+    },
+    {
+      "id": "cgv_art_9",
+      "article": "Article 9",
+      "question": "Quel est le délai de prescription pour une action en justice contre 2WL / Logidoo ? (Article 9)",
+      "mots_cles": ["prescription", "délai", "1 an", "un an", "action en justice", "litige"],
+      "reponse": "Selon l'Article 9 des CGV : Toutes les actions auxquelles le contrat peut donner lieu sont prescrites dans le délai d'un an (1 an) à compter de l'exécution de la prestation litigieuse."
+    },
+    {
+      "id": "cgv_art_11",
+      "question": "Dans quel délai et comment émettre une réclamation ou plainte ? (Article 11)",
+      "mots_cles": ["réclamation", "plainte", "délai réclamation", "48 heures", "48h", "mail", "plateforme"],
+      "reponse": "Selon l'Article 11 des CGV : En cas de non-satisfaction ou de réclamation, le client a le droit d'émettre une plainte dans un délai de 48 heures (48h) qui suivent la fin de l'opération par email ou directement via la plateforme Logidoo."
     }
   ]
 }

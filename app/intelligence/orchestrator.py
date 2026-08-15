@@ -46,7 +46,7 @@ OUTILS = [
         "type": "function",
         "function": {
             "name": "search_faq",
-            "description": "Chercher une réponse dans la base FAQ (horaires, délais, zones de livraison, retours, frais, moyens de paiement).",
+            "description": "Interroger la base de connaissances TexMiles (FAQ et documents internes citables : CGV, politiques, procédures, horaires, délais, zones, retours, frais et paiement). À utiliser avant toute réponse fondée sur une politique ou un document.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -60,16 +60,25 @@ OUTILS = [
         "type": "function",
         "function": {
             "name": "create_quotation",
-            "description": "Générer un devis estimatif de cotation d'expédition.",
+            "description": "Générer un devis estimatif complet de cotation d'expédition.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "origine": {"type": "string", "description": "Lieu de départ / origine"},
-                    "destination": {"type": "string", "description": "Lieu d'arrivée / destination"},
-                    "poids": {"type": "string", "description": "Poids ou dimensions du colis"},
-                    "type_marchandise": {"type": "string", "description": "Nature de la marchandise"},
+                    "lieu_expedition": {"type": "string", "description": "Lieu d'expédition / ville ou pays de départ"},
+                    "lieu_destination": {"type": "string", "description": "Lieu de destination / ville ou pays d'arrivée"},
+                    "expediteur_nom": {"type": "string", "description": "Nom complet de l'expéditeur"},
+                    "expediteur_entreprise": {"type": "string", "description": "Nom de l'entreprise (facultatif)"},
+                    "expediteur_telephone": {"type": "string", "description": "Numéro de téléphone de l'expéditeur"},
+                    "expediteur_email": {"type": "string", "description": "Adresse email de l'expéditeur"},
+                    "nature_marchandise": {"type": "string", "description": "Nature de la marchandise"},
+                    "colis_designation": {"type": "string", "description": "Désignation / description du colis"},
+                    "colis_poids": {"type": "string", "description": "Poids du colis (ex: 15 kg)"},
+                    "colis_valeur": {"type": "string", "description": "Valeur déclarée du colis (ex: 500 000)"},
+                    "colis_devise": {"type": "string", "description": "Devise de la valeur (FCFA, EUR, USD...)"},
+                    "colis_volume": {"type": "string", "description": "Volume ou dimensions du colis (ex: 0.5 m3)"},
+                    "message_complementaire": {"type": "string", "description": "Message ou précisions complémentaires (facultatif)"},
                 },
-                "required": ["origine", "destination"],
+                "required": ["lieu_expedition", "lieu_destination", "nature_marchandise"],
             },
         },
     },
@@ -136,6 +145,9 @@ class AssistantReply:
     raison_escalade: str = ""
     ticket_id: str = ""
     outils_utilises: list[str] = field(default_factory=list)
+    # Sources réellement récupérées côté serveur. Elles sont indépendantes du texte
+    # généré par le modèle pour empêcher les citations inventées.
+    sources: list[dict] = field(default_factory=list)
     prompt_variant: str = "A"
 
 
@@ -221,7 +233,63 @@ class Assistant:
             if not reply.raison_escalade:
                 reply.raison_escalade = "indisponibilité technique"
 
+        if reply.texte and reply.texte != MESSAGE_REPLI:
+            self._append_source_footer(reply)
         return reply
+
+    def _register_sources(self, reply: AssistantReply, matches: list[dict]) -> list[dict]:
+        """Associe les passages récupérés à la réponse avec des références stables.
+
+        Le LLM ne reçoit que des marqueurs ``[S1]``/``[S2]`` provenant du serveur.
+        Il ne peut donc pas choisir lui-même une page ou un document à citer.
+        """
+        known_ids = {source.get("id") for source in reply.sources}
+        tool_results: list[dict] = []
+
+        for match in matches:
+            chunk_id = str(match.get("id") or "")
+            source = dict(match.get("source") or {})
+            if not chunk_id or not source:
+                continue
+
+            existing = next((item for item in reply.sources if item.get("id") == chunk_id), None)
+            if existing is None:
+                if chunk_id in known_ids:
+                    continue
+                marker = f"S{len(reply.sources) + 1}"
+                existing = {
+                    "id": chunk_id,
+                    "marker": marker,
+                    "citation": match.get("citation") or source.get("title") or "Source interne",
+                    "document": source.get("title") or source.get("filename") or "Document interne",
+                    "filename": source.get("filename"),
+                    "page": source.get("page"),
+                    "section": source.get("section"),
+                    "score": match.get("score"),
+                }
+                reply.sources.append(existing)
+                known_ids.add(chunk_id)
+
+            tool_results.append(
+                {
+                    "source_id": existing["marker"],
+                    "citation": existing["citation"],
+                    "score": match.get("score"),
+                    "contenu": match.get("reponse", ""),
+                }
+            )
+        return tool_results
+
+    @staticmethod
+    def _append_source_footer(reply: AssistantReply) -> None:
+        """Ajoute les citations à la réponse, même si le modèle oublie de le faire."""
+        if not reply.sources:
+            return
+        citations = "\n".join(
+            f"- [{source['marker']}] {source['citation']}"
+            for source in reply.sources
+        )
+        reply.texte = f"{reply.texte.rstrip()}\n\nSources vérifiées :\n{citations}"
 
     # --- Exécution des outils demandés par le modèle -----------------------------
     def _executer_outil(self, tc: ToolCall, reply: AssistantReply) -> str:
@@ -252,19 +320,74 @@ class Assistant:
             return json.dumps({"resultat": res["resultat"]}, ensure_ascii=False)
 
         if tc.name == "search_faq":
-            matches = self.faq.search(tc.arguments.get("requete", ""))
-            return json.dumps({"resultats": matches}, ensure_ascii=False)
+            # Un passage source précis est préférable à une liste de contextes
+            # partiellement pertinents : la citation finale reste ainsi exacte.
+            matches = self.faq.search(tc.arguments.get("requete", ""), limite=1)
+            results = self._register_sources(reply, matches)
+            if not results:
+                return json.dumps(
+                    {
+                        "resultats": [],
+                        "consigne": (
+                            "Aucune source fiable n'a été trouvée dans la base de connaissances. "
+                            "N'invente pas de règle ni de politique ; indique cette limite et propose un agent humain si nécessaire."
+                        ),
+                    },
+                    ensure_ascii=False,
+                )
+            return json.dumps(
+                {
+                    "resultats": results,
+                    "consigne": (
+                        "Réponds uniquement à partir des extraits ci-dessus. Tu peux référencer les marqueurs "
+                        "[S1], [S2], etc. Les citations vérifiées seront ajoutées automatiquement à la réponse."
+                    ),
+                },
+                ensure_ascii=False,
+            )
 
         if tc.name == "create_quotation":
             self._compteur_devis += 1
             devis_id = f"COT-{self._compteur_devis:04d}"
             reply.ticket_id = devis_id
+            args = tc.arguments or {}
+            lieu_exp = args.get("lieu_expedition") or args.get("origine") or "Non précisé"
+            lieu_dest = args.get("lieu_destination") or args.get("destination") or "Non précisé"
+            nom_exp = args.get("expediteur_nom") or "Non précisé"
+            entreprise = args.get("expediteur_entreprise") or "N/A"
+            tel = args.get("expediteur_telephone") or "Non précisé"
+            email = args.get("expediteur_email") or "Non précisé"
+            nature = args.get("nature_marchandise") or "Générale"
+            designation = args.get("colis_designation") or "Colis marchandise"
+            poids = args.get("colis_poids") or "Non précisé"
+            valeur = args.get("colis_valeur") or "Non précisée"
+            devise = args.get("colis_devise") or "FCFA"
+            volume = args.get("colis_volume") or "Non précisé"
+            msg_comp = args.get("message_complementaire") or ""
+
             return json.dumps({
                 "cotation_id": devis_id,
                 "statut": "devis_généré",
-                "estimation_tarif": "15 000 FCFA (tarif estimatif)",
-                "delai_livraison": "24 à 48 heures",
-                "consigne": "Présente cette estimation au client avec le numéro de référence du devis."
+                "lieu_expedition": lieu_exp,
+                "lieu_destination": lieu_dest,
+                "expediteur_nom": nom_exp,
+                "expediteur_entreprise": entreprise,
+                "expediteur_telephone": tel,
+                "expediteur_email": email,
+                "nature_marchandise": nature,
+                "colis": {
+                    "designation": designation,
+                    "poids": poids,
+                    "valeur": f"{valeur} {devise}",
+                    "volume": volume,
+                },
+                "message_complementaire": msg_comp,
+                "estimation_tarif": f"Tarif estimatif sur devis {devis_id}",
+                "delai_livraison": "24 à 48 heures (indicatif)",
+                "consigne": (
+                    f"Présente ce récapitulatif complet de cotation au client avec la référence {devis_id}. "
+                    "Confirme-lui que l'équipe commerciale TexMiles étudiera les détails de son expédition et le recontactera rapidement."
+                )
             }, ensure_ascii=False)
 
         if tc.name == "create_operation":

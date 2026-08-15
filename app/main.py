@@ -23,6 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from app.api.v1.router import api_router
 from app.api.v1.endpoints.auth import get_current_user
 from app.db.base import Base
+from app.db.migrate import sync_postgresql_schema, sync_sqlite_schema
 from app.db.session import engine
 
 # Importer tous les modèles pour que SQLAlchemy les détecte
@@ -30,6 +31,8 @@ import app.models.user  # noqa: F401
 import app.models.chat  # noqa: F401
 import app.models.order  # noqa: F401
 import app.models.session  # noqa: F401
+import app.models.csat  # noqa: F401
+import app.models.notification  # noqa: F401
 
 
 def ensure_db_schema_and_admin():
@@ -44,6 +47,8 @@ def ensure_db_schema_and_admin():
         with engine.begin() as conn:
             # Colonne session_id dans chat_messages (ajoutée lors de la session précédente)
             conn.execute(text("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS session_id VARCHAR(100);"))
+            # Sources de connaissance RAG utilisées pour produire la réponse.
+            conn.execute(text("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sources_utilisees TEXT;"))
             # Index sur conversation_sessions.updated_at pour les requêtes de cleanup TTL
             conn.execute(text(
                 "CREATE INDEX IF NOT EXISTS ix_conversation_sessions_updated_at "
@@ -82,6 +87,11 @@ async def lifespan(app: FastAPI):
     from app.core.logging import setup_logging
     setup_logging(log_level="INFO", json_format=True)
     Base.metadata.create_all(bind=engine)
+    # `create_all()` ne modifie pas une table existante. Synchroniser les
+    # colonnes ajoutées après le premier démarrage, notamment celles utilisées
+    # pour marquer une conversation comme traitée.
+    sync_sqlite_schema(engine)
+    sync_postgresql_schema(engine)
     ensure_db_schema_and_admin()
     yield
     # (nettoyage à l'arrêt si nécessaire)
@@ -149,6 +159,8 @@ async def dashboard_page(request: Request):
     return templates.TemplateResponse(request, "dashboard.html")
 
 
+from fastapi.responses import HTMLResponse
+
 @app.get(
     "/chat-demo",
     tags=["Interactive Chat"],
@@ -156,6 +168,53 @@ async def dashboard_page(request: Request):
 )
 async def chat_demo_page(request: Request):
     return templates.TemplateResponse(request, "chat_test.html")
+
+
+@app.get(
+    "/qr",
+    tags=["WhatsApp"],
+    summary="Affichage dynamique du QR Code WhatsApp",
+)
+async def qr_page():
+    """Génère et affiche le QR Code WhatsApp directement dans le navigateur sans erreur 401."""
+    import urllib.request, json
+    b64 = ""
+    try:
+        url = f"{settings.EVOLUTION_API_URL.rstrip('/')}/instance/connect/{settings.EVOLUTION_INSTANCE_NAME}"
+        req = urllib.request.Request(url, headers={"apikey": settings.EVOLUTION_API_KEY})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            b64 = data.get("base64", "")
+    except Exception:
+        b64 = ""
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="12">
+    <title>Scanner WhatsApp — TexMiles</title>
+    <style>
+        body {{ font-family: 'Segoe UI', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: white; margin: 0; }}
+        .card {{ background: #1e293b; padding: 2.5rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center; max-width: 420px; }}
+        h1 {{ margin-top: 0; color: #22c55e; font-size: 1.6rem; }}
+        p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }}
+        img {{ width: 270px; height: 270px; border-radius: 12px; background: white; padding: 10px; border: 4px solid #22c55e; margin: 1rem 0; }}
+        .badge {{ background: #22c55e22; color: #22c55e; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }}
+        .refresh {{ margin-top: 1rem; font-size: 0.8rem; color: #64748b; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="badge">Assistant IA TexMiles</span>
+        <h1>📱 Connecter WhatsApp</h1>
+        <p>Ouvrez <b>WhatsApp</b> sur votre téléphone → <b>Appareils connectés</b> → <b>Connecter un appareil</b> puis scannez :</p>
+        {"<img src='" + b64 + "' alt='QR Code WhatsApp'>" if b64 else "<p style='color:#ef4444; margin: 2rem 0;'>⚠️ Impossible de charger le QR Code.<br>L'appareil est peut-être déjà connecté !</p>"}
+        <p class="refresh">⚡ S'actualise automatiquement toutes les 12 secondes.</p>
+    </div>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
 
 
 @app.get(

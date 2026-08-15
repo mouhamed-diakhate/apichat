@@ -1,0 +1,5 @@
+# Surcharge locale de l'installation Evolution existante (C:\evolution-api).
+# Elle fige une version compatible avec les boutons et listes WhatsApp.
+services:
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.3.6

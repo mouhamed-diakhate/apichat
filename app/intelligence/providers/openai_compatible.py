@@ -9,6 +9,9 @@ OpenAI lui-même, etc.
 Résultat : UNE seule classe couvre tous ces fournisseurs. On choisit lequel via
 la configuration (voir app/config.py). C'est la mise en pratique de l'objectif du
 cahier des charges : pouvoir changer / comparer les modèles sans réécrire le code.
+
+Note : la logique de fallback inter-provider (429 → provider suivant) est désormais
+gérée par FallbackProvider. Ce module se concentre sur UN seul provider/modèle.
 """
 
 import ast
@@ -21,7 +24,6 @@ from openai import OpenAI, BadRequestError, RateLimitError
 from .base import LLMProvider, LLMResponse, ToolCall
 
 logger = logging.getLogger(__name__)
-
 
 
 def _recuperer_appels_mal_formes(texte: str) -> list[ToolCall]:
@@ -49,10 +51,12 @@ def _recuperer_appels_mal_formes(texte: str) -> list[ToolCall]:
 
 
 class OpenAICompatibleProvider(LLMProvider):
-    def __init__(self, api_key: str, model: str, base_url: str):
+    def __init__(self, api_key: str, model: str, base_url: str, name: str = ""):
         # Le client "OpenAI" pointe vers le serveur choisi (Groq, Gemini, x.ai...).
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
+        # Nom lisible pour les logs (ex. "groq/llama-3.3-70b").
+        self._name = name or model
 
     def complete_text(self, system: str, user: str) -> str:
         """
@@ -106,7 +110,7 @@ class OpenAICompatibleProvider(LLMProvider):
             kwargs["tools"] = tools
 
         # Certains modèles (ex. Llama sur Groq) produisent parfois un appel d'outil
-        # mal formaté -> erreur "tool_use_failed". Deux parades combinées :
+        # mal formaté → erreur "tool_use_failed". Deux parades combinées :
         #   1) on tente de RÉCUPÉRER l'appel depuis le texte rejeté (failed_generation) ;
         #   2) sinon on RÉESSAIE (un nouvel échantillonnage corrige souvent le format).
         completion = None
@@ -115,24 +119,9 @@ class OpenAICompatibleProvider(LLMProvider):
             try:
                 completion = self.client.chat.completions.create(**kwargs)
                 break
-            except RateLimitError as e:
-                # Si le modèle actuel subit un Rate Limit (429 Tokens Per Day Exceeded),
-                # on bascule immédiatement sur un modèle de secours léger (llama-3.1-8b-instant).
-                if kwargs.get("model") != "llama-3.1-8b-instant":
-                    logger.warning(
-                        f"[LLM Fallback] Quota atteint sur '{kwargs['model']}'. Basculement sur 'llama-3.1-8b-instant'...",
-                        extra={"previous_model": kwargs['model'], "fallback_model": "llama-3.1-8b-instant"}
-                    )
-                    kwargs["model"] = "llama-3.1-8b-instant"
-
-                    try:
-                        completion = self.client.chat.completions.create(**kwargs)
-                        # Mettre à jour le modèle par défaut pour la suite de la session
-                        self.model = "llama-3.1-8b-instant"
-                        break
-                    except Exception:
-                        raise e
-                raise e
+            except RateLimitError:
+                # Relancer directement : FallbackProvider gère le basculement.
+                raise
             except BadRequestError as e:
                 if "tool_use_failed" not in str(e):
                     raise
@@ -148,7 +137,7 @@ class OpenAICompatibleProvider(LLMProvider):
                 if not appels and brut != str(e):
                     appels = _recuperer_appels_mal_formes(str(e))
                 if appels:
-                    return LLMResponse(text="", tool_calls=appels)
+                    return LLMResponse(text="", tool_calls=appels, provider_used=self._name)
                 # Parade 2 : réessayer.
                 continue
 
@@ -174,7 +163,6 @@ class OpenAICompatibleProvider(LLMProvider):
         if not tool_calls and "<function=" in texte:
             appels_dans_texte = _recuperer_appels_mal_formes(texte)
             if appels_dans_texte:
-                return LLMResponse(text="", tool_calls=appels_dans_texte)
+                return LLMResponse(text="", tool_calls=appels_dans_texte, provider_used=self._name)
 
-        return LLMResponse(text=texte, tool_calls=tool_calls)
-
+        return LLMResponse(text=texte, tool_calls=tool_calls, provider_used=self._name)

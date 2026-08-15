@@ -77,13 +77,16 @@ apichat/
 │     ├─ config.py           # Construit l'assistant depuis les settings
 │     ├─ orchestrator.py     # Le "cerveau" : boucle outils + garde-fous
 │     ├─ orders.py           # Source des commandes + vérification d'identité
-│     ├─ faq.py              # Recherche dans la base FAQ (RAG simple)
+│     ├─ faq.py              # Base de connaissances RAG (FAQ + documents)
+│     ├─ pdf_loader.py       # Ingestion par page et métadonnées de provenance
+│     ├─ vector_store.py     # Recherche hybride + cache d'embeddings persistant
 │     ├─ guardrails.py       # Filet de sécurité d'escalade
 │     ├─ prompt_fr.py        # Consignes de comportement (system prompt)
 │     └─ providers/          # Connecteurs LLM (interface + compatible OpenAI)
 ├─ data/
 │  ├─ orders.mock.json       # Commandes FICTIVES (remplaçables par la vraie API)
-│  └─ faq.fr.json            # Base FAQ éditable sans toucher au code
+│  ├─ faq.fr.json            # Base FAQ éditable sans toucher au code
+│  └─ knowledge/             # PDF, DOCX, Markdown, TXT et HTML internes
 ├─ eval/                     # Harnais de test (12 scénarios) + run_eval.py
 ├─ tests/                    # Tests pytest (auth + chat, mockés)
 ├─ cli.py                    # Chat en ligne de commande (sans serveur)
@@ -142,7 +145,7 @@ Les **outils** (le modèle choisit lequel appeler) :
 | Outil | Rôle |
 |-------|------|
 | `lookup_order(numero, telephone, email)` | Retrouve une commande **après vérification d'identité** et renvoie son statut |
-| `search_faq(requete)` | Cherche la réponse dans la base FAQ |
+| `search_faq(requete)` | Interroge la base de connaissances (FAQ + documents internes) et renvoie des extraits citables |
 | `create_complaint(numero, description)` | Ouvre une réclamation et renvoie un numéro de ticket |
 | `escalate_to_human(raison)` | Transfère la conversation à un agent humain |
 
@@ -164,6 +167,13 @@ Les règles critiques sont appliquées **dans le code**, pas seulement dans le p
 - `data/orders.mock.json` : commandes **fictives**, remplaçables plus tard par la vraie
   API (il suffit d'écrire une classe qui implémente la même interface `OrderSource`).
 - `data/faq.fr.json` : base FAQ **éditable sans toucher au code** (CDC §4.3).
+- `data/knowledge/` : emplacement recommandé des documents internes (`.pdf`, `.docx`,
+  `.md`, `.txt`, `.html`). Les documents à la racine de `data/` restent compatibles.
+- Chaque passage RAG conserve le fichier, la page et l'article/section. Les citations sont
+  ajoutées côté serveur dans la réponse (`Sources vérifiées`) et persistées avec le message
+  pour audit ; elles ne dépendent donc pas d'une citation inventée par le modèle.
+- `data/.rag/` : cache local régénérable des passages et embeddings, ignoré par Git. Les
+  modifications d'un document sont détectées par checksum au prochain démarrage.
 
 ### 5.4 La couche modèle (`providers/` + `intelligence/config.py`)
 Tous les fournisseurs compatibles OpenAI passent par **une seule classe**

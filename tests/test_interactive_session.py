@@ -14,11 +14,14 @@ def test_session_flow_french():
     sid = "test_user_fr_001"
     get_or_create_session(sid).reset()
 
-    # 1. Message initial -> choix de la langue (4 boutons)
+    # 1. Message initial -> CTA « Démarrer » sur un fournisseur compatible,
+    # ou menu numéroté quand Evolution protège la livraison.
     res, s = process_interactive_step(sid, user_input="Bonjour")
     assert s.state == SessionState.AWAITING_LANG
-    assert "Tannal sa lakk" in res["text"]
+    assert res["presentation"] == "list"
+    assert res["menu_button_text"] == "Démarrer"
     assert len(res["buttons"]) == 4
+    assert {button["id"] for button in res["buttons"]} == {"lang_fr", "lang_wo", "lang_en", "lang_ar"}
 
     # 2. Français -> choix du mode (2 boutons)
     res, s = process_interactive_step(sid, user_input="", action_id="lang_fr")
@@ -27,11 +30,15 @@ def test_session_flow_french():
     assert "Comment souhaitez-vous échanger avec nous" in res["text"]
     assert len(res["buttons"]) == 2
 
-    # 3. Écrire -> menu principal (3 services)
+    # 3. Écrire -> liste du menu principal (4 services)
     res, s = process_interactive_step(sid, user_input="", action_id="mode_write")
     assert s.state == SessionState.AWAITING_MENU
     assert "Menu principal" in res["text"]
-    assert len(res["buttons"]) == 3
+    assert res["presentation"] == "list"
+    assert res["menu_button_text"] == "Voir les services"
+    assert len(res["buttons"]) == 4
+    assert res["buttons"][-1]["whatsapp_label"] == "❓ FAQ"
+    assert all(len(button["whatsapp_label"]) <= 24 for button in res["buttons"])
 
     # 4. Suivi d'opération -> agent IA
     res, s = process_interactive_step(sid, user_input="", action_id="service_tracking")
